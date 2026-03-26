@@ -31,6 +31,17 @@
     }
   }
   
+  &--success {
+    background: #27ae60;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #229954;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+    }
+  }
+  
   &--danger {
     background: #e74c3c;
     color: white;
@@ -53,5 +64,24 @@
   &--small {
     padding: 0.25rem 0.75rem;
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .button {
+    &--large {
+      padding: 0.6rem 1.2rem;
+      font-size: 0.9rem;
+    }
+    
+    &--medium {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+    }
+    
+    &--small {
+      padding: 0.2rem 0.6rem;
+      font-size: 0.8rem;
+    }
   }
 }

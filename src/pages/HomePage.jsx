@@ -6,12 +6,13 @@ import './HomePage.scss';
 
 const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showNewDataModal, setShowNewDataModal] = useState(false);
+  const [newDataName, setNewDataName] = useState('');
   const fileInputRef = useRef(null);
 
   const handleFileLoad = (content) => {
     try {
       const parsed = JSON.parse(content);
-      // Validate project structure
       if (parsed.project !== undefined && parsed.columns !== undefined && parsed.data !== undefined) {
         onLoad(parsed);
         alert('Project loaded successfully!');
@@ -33,6 +34,37 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
     onLoad(newProject);
     setShowNewProjectModal(false);
     alert('New project created!');
+  };
+
+  const handleAddData = () => {
+    if (!newDataName.trim()) {
+      alert('Please enter a data item name');
+      return;
+    }
+    
+    if (!project) {
+      alert('Please load or create a project first');
+      return;
+    }
+    
+    const newData = {
+      id: Date.now(),
+      name: newDataName,
+      position: (project.data?.length || 0) + 1,
+      order: (project.columns || []).map(column => ({
+        column_id: column.id,
+        position: 1
+      })),
+    };
+    
+    onLoad({
+      ...project,
+      data: [...(project.data || []), newData],
+    });
+    
+    setNewDataName('');
+    setShowNewDataModal(false);
+    alert('Data item added successfully!');
   };
 
   const handleExport = () => {
@@ -62,7 +94,6 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
         <p className="home-page__subtitle">Create and manage priority assessment surveys</p>
         
         <div className="home-page__actions">
-          {/* Load Project - Drag & Drop Field */}
           <FileUpload onFileLoad={handleFileLoad}>
             <div className="home-page__upload-area">
               <div className="upload-area__icon">📁</div>
@@ -73,14 +104,17 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
             </div>
           </FileUpload>
 
-          {/* Download Project Button - only when project is loaded */}
           {project && (
-            <Button variant="secondary" size="large" onClick={handleExport} className="home-page__button">
-              📥 Download Project
-            </Button>
+            <>
+              <Button variant="secondary" size="large" onClick={handleExport} className="home-page__button">
+                📥 Download Project
+              </Button>
+              <Button variant="success" size="large" onClick={() => setShowNewDataModal(true)} className="home-page__button">
+                ➕ Create New Data Item
+              </Button>
+            </>
           )}
 
-          {/* Create New Project Button */}
           <Button 
             variant={project ? "danger" : "primary"} 
             size="large" 
@@ -90,7 +124,6 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
             ✨ Create New Project
           </Button>
 
-          {/* Navigation Buttons - only when project is loaded and has columns */}
           {project && (
             <>
               <div className="home-page__divider">
@@ -125,17 +158,11 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
                     </Button>
                   </>
                 )}
-                {(!project.columns || project.columns.length === 0) && (
-                  <div className="home-page__hint">
-                    ℹ️ Add columns in Project Settings to enable other pages
-                  </div>
-                )}
               </div>
             </>
           )}
         </div>
 
-        {/* Current Project Info */}
         {project && (
           <div className="home-page__info">
             <div className="info-card">
@@ -165,7 +192,6 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
         )}
       </div>
 
-      {/* New Project Confirmation Modal */}
       <Modal
         isOpen={showNewProjectModal}
         onClose={() => setShowNewProjectModal(false)}
@@ -188,6 +214,34 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
             Create New Project
           </Button>
           <Button variant="secondary" onClick={() => setShowNewProjectModal(false)}>
+            Cancel
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showNewDataModal}
+        onClose={() => setShowNewDataModal(false)}
+        title="Create New Data Item"
+      >
+        <input
+          type="text"
+          value={newDataName}
+          onChange={(e) => setNewDataName(e.target.value)}
+          placeholder="Enter data item name"
+          className="modal__input"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleAddData();
+            }
+          }}
+          autoFocus
+        />
+        <div className="modal__actions">
+          <Button variant="primary" onClick={handleAddData}>
+            Create
+          </Button>
+          <Button variant="secondary" onClick={() => setShowNewDataModal(false)}>
             Cancel
           </Button>
         </div>

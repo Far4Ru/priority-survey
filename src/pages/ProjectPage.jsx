@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './ProjectPage.scss';
@@ -8,6 +9,13 @@ const ProjectPage = ({ project, onUpdate }) => {
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
   const [newDataName, setNewDataName] = useState('');
+  const [dataItems, setDataItems] = useState([]);
+
+  useEffect(() => {
+    if (project && project.data) {
+      setDataItems([...project.data].sort((a, b) => a.position - b.position));
+    }
+  }, [project]);
 
   const handleProjectUpdate = (field, value) => {
     onUpdate({
@@ -76,7 +84,6 @@ const ProjectPage = ({ project, onUpdate }) => {
   const handleDeleteData = (id) => {
     if (window.confirm('Delete this data item?')) {
       const updatedData = (project.data || []).filter(item => item.id !== id);
-      // Reorder positions
       const reorderedData = updatedData.map((item, idx) => ({
         ...item,
         position: idx + 1,
@@ -86,6 +93,25 @@ const ProjectPage = ({ project, onUpdate }) => {
         data: reorderedData,
       });
     }
+  };
+
+  const handleDataDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(dataItems);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const updatedData = items.map((item, idx) => ({
+      ...item,
+      position: idx + 1,
+    }));
+
+    setDataItems(updatedData);
+    onUpdate({
+      ...project,
+      data: updatedData,
+    });
   };
 
   return (
@@ -151,30 +177,52 @@ const ProjectPage = ({ project, onUpdate }) => {
 
       <div className="project-page__section">
         <div className="project-page__header">
-          <h2>Data Items</h2>
+          <h2>Data Items (Drag to reorder)</h2>
           <Button variant="primary" size="small" onClick={() => setShowDataModal(true)}>
             Add Data Item
           </Button>
         </div>
-        <div className="project-page__columns">
-          {(project.data || []).map((item) => (
-            <div key={item.id} className="project-page__column-item">
-              <span className="column-name">{item.name}</span>
-              <div className="column-actions">
-                <Button
-                  variant="danger"
-                  size="small"
-                  onClick={() => handleDeleteData(item.id)}
-                >
-                  Delete
-                </Button>
+        <DragDropContext onDragEnd={handleDataDragEnd}>
+          <Droppable droppableId="data-items">
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="project-page__data-items"
+              >
+                {dataItems.map((item, index) => (
+                  <Draggable key={item.id} draggableId={String(item.id)} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`project-page__data-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                      >
+                        <div className="data-item__drag-handle" {...provided.dragHandleProps}>
+                          ⋮⋮
+                        </div>
+                        <span className="data-item__name">{item.name}</span>
+                        <div className="data-item__actions">
+                          <Button
+                            variant="danger"
+                            size="small"
+                            onClick={() => handleDeleteData(item.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </div>
-            </div>
-          ))}
-          {(project.data || []).length === 0 && (
-            <p className="project-page__empty">No data items yet. Click "Add Data Item" to get started.</p>
-          )}
-        </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+        {dataItems.length === 0 && (
+          <p className="project-page__empty">No data items yet. Click "Add Data Item" to get started.</p>
+        )}
       </div>
 
       <Modal
@@ -226,6 +274,7 @@ const ProjectPage = ({ project, onUpdate }) => {
               handleAddData();
             }
           }}
+          autoFocus
         />
         <div className="modal__actions">
           <Button variant="primary" onClick={handleAddData}>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import './DataTablePage.scss';
 
 const DataTablePage = ({ project, onUpdate }) => {
@@ -7,7 +6,6 @@ const DataTablePage = ({ project, onUpdate }) => {
 
   useEffect(() => {
     if (project && project.data) {
-      // Ensure all data items have proper order arrays
       const initializedData = project.data.map(item => ({
         ...item,
         order: item.order || [],
@@ -17,20 +15,16 @@ const DataTablePage = ({ project, onUpdate }) => {
     }
   }, [project]);
 
-  // Calculate positions based on order and column priorities
   const calculateResults = () => {
     if (!dataItems.length || !project.columns.length) return [];
 
     const results = [];
-
-    // Sort data by position
     const sortedData = [...dataItems].sort((a, b) => a.position - b.position);
 
-    sortedData.forEach((item, idx) => {
+    sortedData.forEach((item) => {
       let totalScore = 0;
       const columnScores = {};
 
-      // Calculate scores for each column based on order positions
       project.columns.forEach(column => {
         const orderItem = item.order.find(o => o.column_id === column.id);
         if (orderItem) {
@@ -44,39 +38,17 @@ const DataTablePage = ({ project, onUpdate }) => {
       results.push({
         id: item.id,
         name: item.name,
-        position: idx + 1,
         totalScore,
         columnScores,
       });
     });
 
-    // Sort by totalScore (lower score = higher priority)
     const sortedResults = [...results].sort((a, b) => a.totalScore - b.totalScore);
     
-    // Add final ranking
     return sortedResults.map((result, idx) => ({
       ...result,
       finalRank: idx + 1,
     }));
-  };
-
-  const handleDataDragEnd = (result) => {
-    if (!result.destination) return;
-
-    const items = Array.from(dataItems);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    const updatedData = items.map((item, idx) => ({
-      ...item,
-      position: idx + 1,
-    }));
-
-    setDataItems(updatedData);
-    onUpdate({
-      ...project,
-      data: updatedData,
-    });
   };
 
   const handleOrderChange = (dataId, columnId, value) => {
@@ -111,14 +83,27 @@ const DataTablePage = ({ project, onUpdate }) => {
   };
 
   const results = calculateResults();
-  const sortedColumns = [...(project?.columns || [])].sort((a, b) => (a.final_position || a.position || 0) - (b.final_position || b.position || 0));
+  const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
+    (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
+  );
 
   if (!project || !project.columns || project.columns.length === 0) {
     return (
       <div className="data-table-page">
         <div className="data-table__empty">
           <h2>No Data Available</h2>
-          <p>Please add columns and data in the Project page first.</p>
+          <p>Please add columns in the Project Settings page first.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dataItems.length) {
+    return (
+      <div className="data-table-page">
+        <div className="data-table__empty">
+          <h2>No Data Items</h2>
+          <p>Please add data items to start prioritizing.</p>
         </div>
       </div>
     );
@@ -129,75 +114,48 @@ const DataTablePage = ({ project, onUpdate }) => {
       <h2>Priority Assessment Results</h2>
       
       <div className="data-table__container">
-        <DragDropContext onDragEnd={handleDataDragEnd}>
-          <Droppable droppableId="data-items">
-            {(provided) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="data-table"
-              >
-                <div className="data-table__header">
-                  <div className="header__cell"></div>
-                  <div className="header__cell">#</div>
-                  <div className="header__cell">Name</div>
-                  {sortedColumns.map(column => (
-                    <div key={column.id} className="header__cell">
-                      {column.name}
-                    </div>
-                  ))}
-                  <div className="header__cell">Total</div>
-                  <div className="header__cell">Rank</div>
-                </div>
-
-                {dataItems.map((item, index) => {
-                  const result = results.find(r => r.id === item.id);
-                  return (
-                    <Draggable key={item.id} draggableId={String(item.id)} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`data-table__row ${snapshot.isDragging ? 'dragging' : ''}`}
-                        >
-                          <div className="row__cell drag-handle" {...provided.dragHandleProps}>
-                            ⋮⋮
-                          </div>
-                          <div className="row__cell">{index + 1}</div>
-                          <div className="row__cell">{item.name}</div>
-                          {sortedColumns.map(column => {
-                            const orderItem = item.order.find(o => o.column_id === column.id);
-                            return (
-                              <div key={column.id} className="row__cell">
-                                <input
-                                  type="number"
-                                  value={orderItem?.position || 1}
-                                  onChange={(e) => handleOrderChange(item.id, column.id, e.target.value)}
-                                  min="1"
-                                  className="priority-input"
-                                />
-                              </div>
-                            );
-                          })}
-                          <div className="row__cell">{result?.totalScore || 0}</div>
-                          <div className="row__cell rank-cell">{result?.finalRank || '-'}</div>
-                        </div>
-                      )}
-                    </Draggable>
-                  );
-                })}
-                {provided.placeholder}
+        <div className="data-table">
+          <div className="data-table__header">
+            <div className="header__cell">#</div>
+            <div className="header__cell">Name</div>
+            {sortedColumns.map(column => (
+              <div key={column.id} className="header__cell">
+                {column.name}
               </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      </div>
+            ))}
+            <div className="header__cell">Total Score</div>
+            <div className="header__cell">Final Rank</div>
+          </div>
 
-      {dataItems.length === 0 && (
-        <div className="data-table__add-hint">
-          <p>No data items yet. Add data items to start prioritizing.</p>
+          <div className="data-table__body">
+            {dataItems.map((item, index) => {
+              const result = results.find(r => r.id === item.id);
+              return (
+                <div key={item.id} className="data-table__row">
+                  <div className="row__cell">{index + 1}</div>
+                  <div className="row__cell row__cell--name">{item.name}</div>
+                  {sortedColumns.map(column => {
+                    const orderItem = item.order.find(o => o.column_id === column.id);
+                    return (
+                      <div key={column.id} className="row__cell">
+                        <input
+                          type="number"
+                          value={orderItem?.position || 1}
+                          onChange={(e) => handleOrderChange(item.id, column.id, e.target.value)}
+                          min="1"
+                          className="priority-input"
+                        />
+                      </div>
+                    );
+                  })}
+                  <div className="row__cell row__cell--score">{result?.totalScore || 0}</div>
+                  <div className="row__cell row__cell--rank">{result?.finalRank || '-'}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
