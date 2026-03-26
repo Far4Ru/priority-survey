@@ -161,6 +161,7 @@
       color: #3498db;
       text-decoration: none;
       word-break: break-all;
+      flex: 1;
       
       &:hover {
         text-decoration: underline;
@@ -169,33 +170,21 @@
   }
 }
 
-.image-upload-area {
-  cursor: pointer;
+.banner-preview {
+  margin-top: 0.5rem;
   
-  .banner-preview {
-    width: 100%;
+  img {
+    max-width: 100%;
     max-height: 200px;
+    border-radius: 0.5rem;
     object-fit: cover;
-    border-radius: 0.5rem;
   }
-  
-  .upload-placeholder {
-    border: 2px dashed #e0e4e8;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    text-align: center;
-    transition: all 0.2s;
-    
-    &:hover {
-      border-color: #3498db;
-      background: #f8f9fa;
-    }
-    
-    .upload-icon {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-  }
+}
+
+.respondent-hint {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 768px) {

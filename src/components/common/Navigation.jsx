@@ -3,7 +3,7 @@ import './Navigation.scss';
 
 const Navigation = ({ currentPage, onNavigate, projectName }) => {
   const pages = [
-    { id: 'project', label: 'Project' },
+    { id: 'project', label: 'Project Settings' },
     { id: 'priority', label: 'Priority Order' },
     { id: 'data', label: 'Data Table' },
   ];
@@ -22,12 +22,14 @@ const Navigation = ({ currentPage, onNavigate, projectName }) => {
               {page.label}
             </button>
           ))}
-          <button
-            className="navigation__link navigation__link--home"
-            onClick={() => onNavigate('home')}
-          >
-            Home
-          </button>
+          {currentPage !== 'home' && (
+            <button
+              className="navigation__link navigation__link--home"
+              onClick={() => onNavigate('home')}
+            >
+              Home
+            </button>
+          )}
         </div>
       </div>
     </nav>

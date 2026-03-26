@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
-import FileUpload from '../components/common/FileUpload';
 import './ProjectPage.scss';
 
 const ProjectPage = ({ project, onUpdate }) => {
@@ -38,14 +37,6 @@ const ProjectPage = ({ project, onUpdate }) => {
   const handleRemoveLink = (index) => {
     const updatedLinks = project.links.filter((_, i) => i !== index);
     handleProjectUpdate('links', updatedLinks);
-  };
-
-  const handleImageUpload = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      handleProjectUpdate('image_url', e.target.result);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleAddColumn = () => {
@@ -138,6 +129,41 @@ const ProjectPage = ({ project, onUpdate }) => {
     });
   };
 
+  const exportRespondentFile = () => {
+    // Create a complete respondent survey file with all project configuration
+    const respondentSurvey = {
+      role: 'respondent',
+      project: project.project,
+      links: project.links || [],
+      bg_color: project.bg_color || '#f5f7fa',
+      text_color: project.text_color || '#2c3e50',
+      card_color: project.card_color || '#ffffff',
+      image_url: project.image_url || '',
+      columns: project.columns || [],
+      data: {
+        id: null,
+        name: '',
+        position: 1,
+        order: (project.columns || []).map(column => ({
+          column_id: column.id,
+          position: 1
+        })),
+      },
+    };
+
+    const dataStr = JSON.stringify(respondentSurvey, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${project.project}_respondent_survey.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    alert('Respondent survey file downloaded! Share this file with respondents.');
+  };
+
   return (
     <div className="project-page">
       <div className="project-page__section">
@@ -196,19 +222,18 @@ const ProjectPage = ({ project, onUpdate }) => {
         </div>
 
         <div className="project-page__field">
-          <label>Banner Image</label>
-          <FileUpload onFileLoad={handleImageUpload} accept="image/*">
-            <div className="image-upload-area">
-              {project.image_url ? (
-                <img src={project.image_url} alt="Banner" className="banner-preview" />
-              ) : (
-                <div className="upload-placeholder">
-                  <div className="upload-icon">🖼️</div>
-                  <div>Click or drag to upload banner image</div>
-                </div>
-              )}
+          <label>Banner Image URL</label>
+          <input
+            type="url"
+            value={project.image_url || ''}
+            onChange={(e) => handleProjectUpdate('image_url', e.target.value)}
+            placeholder="https://example.com/banner.jpg"
+          />
+          {project.image_url && (
+            <div className="banner-preview">
+              <img src={project.image_url} alt="Banner preview" />
             </div>
-          </FileUpload>
+          )}
         </div>
       </div>
 
@@ -255,7 +280,7 @@ const ProjectPage = ({ project, onUpdate }) => {
           </Button>
         </div>
         <DragDropContext onDragEnd={handleDataDragEnd}>
-          <Droppable droppableId="project-data-items">
+          <Droppable droppableId="project-data-droppable">
             {(provided, snapshot) => (
               <div
                 {...provided.droppableProps}
@@ -263,7 +288,7 @@ const ProjectPage = ({ project, onUpdate }) => {
                 className={`project-page__data-items ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
               >
                 {dataItems.map((item, index) => (
-                  <Draggable key={item.id} draggableId={String(item.id)} index={index}>
+                  <Draggable key={item.id} draggableId={`project-data-${item.id}`} index={index}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
@@ -292,6 +317,19 @@ const ProjectPage = ({ project, onUpdate }) => {
             )}
           </Droppable>
         </DragDropContext>
+      </div>
+
+      <div className="project-page__section">
+        <div className="project-page__header">
+          <h2>Respondent Survey</h2>
+          <Button variant="success" size="medium" onClick={exportRespondentFile}>
+            📥 Download Respondent Survey
+          </Button>
+        </div>
+        <p className="respondent-hint">
+          Download this file and share it with respondents. They can open it to complete the priority survey.
+          The file contains all project configuration (columns, colors, links) for the respondent.
+        </p>
       </div>
 
       <Modal isOpen={showColumnModal} onClose={() => setShowColumnModal(false)} title="Edit Column">

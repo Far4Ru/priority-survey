@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import FileUpload from '../components/common/FileUpload';
+import Navigation from '../components/common/Navigation';
 import './HomePage.scss';
 
 const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
@@ -13,26 +14,37 @@ const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
   const handleFileLoad = (content) => {
     try {
       const parsed = JSON.parse(content);
+      
+      // Check if it's a respondent file (has role: 'respondent')
       if (parsed.role === 'respondent') {
-        // Handle respondent data
-        if (parsed.project && parsed.data) {
+        // Validate that respondent file has all required fields
+        if (parsed.project && parsed.columns && parsed.data) {
+          // Ensure columns exist (at least one column)
+          if (parsed.columns.length === 0) {
+            alert('Invalid respondent file: No columns defined in the survey.');
+            return;
+          }
+          
           onLoad(parsed);
           setUserRole('respondent');
           alert('Respondent survey loaded successfully!');
         } else {
-          alert('Invalid respondent file format.');
+          alert('Invalid respondent file format. Missing required fields (project, columns, or data).');
         }
-      } else if (parsed.project !== undefined && parsed.columns !== undefined && parsed.data !== undefined) {
-        // Admin project
+      } 
+      // Check if it's an admin project file
+      else if (parsed.project !== undefined && parsed.columns !== undefined && parsed.data !== undefined) {
         const adminProject = { ...parsed, role: 'admin' };
         onLoad(adminProject);
         setUserRole('admin');
         alert('Project loaded successfully!');
-      } else {
-        alert('Invalid project file format.');
+      } 
+      else {
+        alert('Invalid file format. Please upload a valid project or respondent JSON file.');
       }
     } catch (e) {
-      alert('Failed to parse file.');
+      console.error('Parse error:', e);
+      alert('Failed to parse file. Please make sure it\'s a valid JSON file.');
     }
   };
 
@@ -97,7 +109,7 @@ const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
           data: updatedData,
         };
         onLoad(updatedProject);
-        alert('Respondent data added successfully!');
+        alert(`Respondent data from "${parsed.data.name}" added successfully!`);
         setShowRespondentUpload(false);
       } else {
         alert('Project name mismatch or invalid respondent file.');
@@ -130,65 +142,65 @@ const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
 
   return (
     <div className="home-page">
-      {project && (
-        <div className="home-page__nav-bar">
-          <div className="nav-bar__buttons">
-            <Button variant="primary" size="small" onClick={() => onNavigate('project')}>
-              Settings
+      {/* Top Action Bar */}
+      {project && project.role === 'admin' && (
+        <div className="home-page__action-bar">
+          <div className="action-bar__container">
+            <Button variant="secondary" size="small" onClick={handleExport}>
+              📥 Download
             </Button>
-            {project.columns && project.columns.length > 0 && (
-              <>
-                <Button variant="primary" size="small" onClick={() => onNavigate('priority')}>
-                  Priority
-                </Button>
-                <Button variant="primary" size="small" onClick={() => onNavigate('data')}>
-                  Data
-                </Button>
-              </>
-            )}
+            <Button variant="success" size="small" onClick={() => setShowRespondentUpload(true)}>
+              📤 Load Data
+            </Button>
+            <Button variant="success" size="small" onClick={() => setShowNewDataModal(true)}>
+              ➕ New Data
+            </Button>
+            <Button variant="danger" size="small" onClick={() => setShowNewProjectModal(true)}>
+              ✨ New Project
+            </Button>
             <Button variant="danger" size="small" onClick={handleClearProject}>
-              Clear
+              🗑️ Clear
             </Button>
           </div>
         </div>
       )}
 
+      {/* Navigation Bar (matches other pages) */}
+      {project && (
+        <Navigation
+          currentPage="home"
+          onNavigate={onNavigate}
+          projectName={project.project}
+        />
+      )}
+
+      {/* Main Content */}
       <div className="home-page__container">
-        <h1 className="home-page__title">Priority Survey Tool</h1>
-        <p className="home-page__subtitle">Create and manage priority assessment surveys</p>
-        
-        <div className="home-page__actions">
-          <FileUpload onFileLoad={handleFileLoad}>
-            <div className="home-page__upload-area">
-              <div className="upload-area__icon">📁</div>
-              <div className="upload-area__text">
-                <strong>Drag & Drop</strong> or <strong>click to browse</strong>
+        <div className="home-page__card">
+          <h1 className="home-page__title">Priority Survey Tool</h1>
+          <p className="home-page__subtitle">Create and manage priority assessment surveys</p>
+          
+          <div className="home-page__actions">
+            <FileUpload onFileLoad={handleFileLoad}>
+              <div className="home-page__upload-area">
+                <div className="upload-area__icon">📁</div>
+                <div className="upload-area__text">
+                  <strong>Drag & Drop</strong> or <strong>click to browse</strong>
+                </div>
+                <div className="upload-area__hint">Upload JSON project or respondent file</div>
               </div>
-              <div className="upload-area__hint">Upload JSON project or respondent file</div>
-            </div>
-          </FileUpload>
+            </FileUpload>
 
-          {project && project.role === 'admin' && (
-            <>
-              <Button variant="secondary" size="large" onClick={handleExport}>
-                📥 Download Project
+            {!project && (
+              <Button 
+                variant="primary" 
+                size="large" 
+                onClick={() => setShowNewProjectModal(true)}
+              >
+                ✨ Create New Project
               </Button>
-              <Button variant="success" size="large" onClick={() => setShowRespondentUpload(true)}>
-                📤 Load Respondent Data
-              </Button>
-              <Button variant="success" size="large" onClick={() => setShowNewDataModal(true)}>
-                ➕ Create New Data Item
-              </Button>
-            </>
-          )}
-
-          <Button 
-            variant={project ? "danger" : "primary"} 
-            size="large" 
-            onClick={() => setShowNewProjectModal(true)}
-          >
-            ✨ Create New Project
-          </Button>
+            )}
+          </div>
         </div>
       </div>
 

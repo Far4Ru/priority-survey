@@ -1,15 +1,15 @@
 .home-page {
   min-height: 100vh;
   
-  &__nav-bar {
+  &__action-bar {
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    padding: 1rem 2rem;
+    padding: 0.75rem 2rem;
     position: sticky;
     top: 0;
     z-index: 100;
     
-    .nav-bar__buttons {
+    .action-bar__container {
       max-width: 1400px;
       margin: 0 auto;
       display: flex;
@@ -21,12 +21,20 @@
   
   &__container {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 3rem 2rem;
-    max-width: 700px;
-    margin: 0 auto;
+    min-height: calc(100vh - 120px);
+  }
+  
+  &__card {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 3rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
   }
   
   &__title {
@@ -35,14 +43,12 @@
     margin-bottom: 0.5rem;
     font-weight: 300;
     letter-spacing: -0.5px;
-    text-align: center;
   }
   
   &__subtitle {
     color: #7f8c8d;
     margin-bottom: 2rem;
     font-size: 1rem;
-    text-align: center;
   }
   
   &__actions {
@@ -114,12 +120,16 @@
 
 @media (max-width: 768px) {
   .home-page {
-    &__nav-bar {
-      padding: 0.75rem 1rem;
+    &__action-bar {
+      padding: 0.5rem 1rem;
     }
     
     &__container {
       padding: 2rem 1rem;
+    }
+    
+    &__card {
+      padding: 1.5rem;
     }
     
     &__title {
