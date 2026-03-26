@@ -1,0 +1,80 @@
+.project-page {
+  max-width: 800px;
+  margin: 0 auto;
+  
+  &__section {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    
+    h2 {
+      color: #2c3e50;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+  }
+  
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    
+    h2 {
+      margin-bottom: 0;
+    }
+  }
+  
+  &__field {
+    margin-bottom: 1rem;
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e0e4e8;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      transition: all 0.2s;
+      
+      &:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+      }
+    }
+  }
+  
+  &__columns {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  &__column-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    
+    .column-name {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    
+    .column-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+  }
+}

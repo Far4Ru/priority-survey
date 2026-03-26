@@ -1,0 +1,14 @@
+.file-upload {
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  
+  &--dragging {
+    transform: scale(1.02);
+    
+    .button {
+      background: #2980b9;
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+    }
+  }
+}
