@@ -142,6 +142,17 @@ const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
 
   return (
     <div className="home-page">
+
+      {/* Navigation Bar (matches other pages) */}
+      {project && (
+        <Navigation
+          currentPage="home"
+          onNavigate={onNavigate}
+          projectName={project.project}
+        />
+      )}
+
+      
       {/* Top Action Bar */}
       {project && project.role === 'admin' && (
         <div className="home-page__action-bar">
@@ -163,15 +174,6 @@ const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
             </Button>
           </div>
         </div>
-      )}
-
-      {/* Navigation Bar (matches other pages) */}
-      {project && (
-        <Navigation
-          currentPage="home"
-          onNavigate={onNavigate}
-          projectName={project.project}
-        />
       )}
 
       {/* Main Content */}

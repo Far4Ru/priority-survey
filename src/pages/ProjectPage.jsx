@@ -166,158 +166,158 @@ const ProjectPage = ({ project, onUpdate }) => {
 
   return (
     <div className="project-page">
-      <div className="project-page__section">
-        <h2>Project Settings</h2>
-        <div className="project-page__field">
-          <label>Project Name</label>
-          <input
-            type="text"
-            value={project.project || ''}
-            onChange={(e) => handleProjectUpdate('project', e.target.value)}
-          />
-        </div>
-
-        <div className="project-page__field">
-          <label>Links</label>
-          <div className="links-list">
-            {(project.links || []).map((link, index) => (
-              <div key={index} className="link-item">
-                <a href={link} target="_blank" rel="noopener noreferrer">{link}</a>
-                <Button variant="danger" size="small" onClick={() => handleRemoveLink(index)}>
-                  Remove
-                </Button>
-              </div>
-            ))}
+        <div className="project-page__section">
+          <h2>Project Settings</h2>
+          <div className="project-page__field">
+            <label>Project Name</label>
+            <input
+              type="text"
+              value={project.project || ''}
+              onChange={(e) => handleProjectUpdate('project', e.target.value)}
+            />
           </div>
+
+          <div className="project-page__field">
+            <label>Links</label>
+            <div className="links-list">
+              {(project.links || []).map((link, index) => (
+                <div key={index} className="link-item">
+                  <a href={link} target="_blank" rel="noopener noreferrer">{link}</a>
+                  <Button variant="danger" size="small" onClick={() => handleRemoveLink(index)}>
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
           <Button variant="secondary" size="small" onClick={() => setShowLinkModal(true)}>
             Add Link
           </Button>
+          </div>
+
+          <div className="project-page__field">
+            <label>Background Color</label>
+            <input
+              type="color"
+              value={project.bg_color || '#f5f7fa'}
+              onChange={(e) => handleProjectUpdate('bg_color', e.target.value)}
+            />
+          </div>
+
+          <div className="project-page__field">
+            <label>Text Color</label>
+            <input
+              type="color"
+              value={project.text_color || '#2c3e50'}
+              onChange={(e) => handleProjectUpdate('text_color', e.target.value)}
+            />
+          </div>
+
+          <div className="project-page__field">
+            <label>Card Color</label>
+            <input
+              type="color"
+              value={project.card_color || '#ffffff'}
+              onChange={(e) => handleProjectUpdate('card_color', e.target.value)}
+            />
+          </div>
+
+          <div className="project-page__field">
+            <label>Banner Image URL</label>
+            <input
+              type="url"
+              value={project.image_url || ''}
+              onChange={(e) => handleProjectUpdate('image_url', e.target.value)}
+              placeholder="https://example.com/banner.jpg"
+            />
+            {project.image_url && (
+              <div className="banner-preview">
+                <img src={project.image_url} alt="Banner preview" />
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="project-page__field">
-          <label>Background Color</label>
-          <input
-            type="color"
-            value={project.bg_color || '#f5f7fa'}
-            onChange={(e) => handleProjectUpdate('bg_color', e.target.value)}
-          />
-        </div>
-
-        <div className="project-page__field">
-          <label>Text Color</label>
-          <input
-            type="color"
-            value={project.text_color || '#2c3e50'}
-            onChange={(e) => handleProjectUpdate('text_color', e.target.value)}
-          />
-        </div>
-
-        <div className="project-page__field">
-          <label>Card Color</label>
-          <input
-            type="color"
-            value={project.card_color || '#ffffff'}
-            onChange={(e) => handleProjectUpdate('card_color', e.target.value)}
-          />
-        </div>
-
-        <div className="project-page__field">
-          <label>Banner Image URL</label>
-          <input
-            type="url"
-            value={project.image_url || ''}
-            onChange={(e) => handleProjectUpdate('image_url', e.target.value)}
-            placeholder="https://example.com/banner.jpg"
-          />
-          {project.image_url && (
-            <div className="banner-preview">
-              <img src={project.image_url} alt="Banner preview" />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="project-page__section">
+        <div className="project-page__section">
         <div className="project-page__header">
           <h2>Columns</h2>
           <Button variant="primary" size="small" onClick={handleAddColumn}>
             Add Column
           </Button>
         </div>
-        <div className="project-page__columns">
-          {(project.columns || []).map((column) => (
-            <div key={column.id} className="project-page__column-item">
-              <span className="column-name">{column.name}</span>
-              <div className="column-actions">
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => {
-                    setEditingColumn(column);
-                    setShowColumnModal(true);
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="danger"
-                  size="small"
-                  onClick={() => handleDeleteColumn(column.id)}
-                >
-                  Delete
-                </Button>
+          <div className="project-page__columns">
+            {(project.columns || []).map((column) => (
+              <div key={column.id} className="project-page__column-item">
+                <span className="column-name">{column.name}</span>
+                <div className="column-actions">
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => {
+                      setEditingColumn(column);
+                      setShowColumnModal(true);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="small"
+                    onClick={() => handleDeleteColumn(column.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="project-page__section">
+        <div className="project-page__section">
         <div className="project-page__header">
           <h2>Data Items (Drag to reorder)</h2>
           <Button variant="primary" size="small" onClick={() => setShowDataModal(true)}>
             Add Data Item
           </Button>
         </div>
-        <DragDropContext onDragEnd={handleDataDragEnd}>
-          <Droppable droppableId="project-data-droppable">
-            {(provided, snapshot) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className={`project-page__data-items ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
-              >
-                {dataItems.map((item, index) => (
-                  <Draggable key={item.id} draggableId={`project-data-${item.id}`} index={index}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={`project-page__data-item ${snapshot.isDragging ? 'dragging' : ''}`}
-                      >
-                        <div className="data-item__drag-handle" {...provided.dragHandleProps}>
-                          ⋮⋮
+          <DragDropContext onDragEnd={handleDataDragEnd}>
+            <Droppable droppableId="project-data-droppable">
+              {(provided, snapshot) => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className={`project-page__data-items ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+                >
+                  {dataItems.map((item, index) => (
+                    <Draggable key={item.id} draggableId={`project-data-${item.id}`} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`project-page__data-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                        >
+                          <div className="data-item__drag-handle" {...provided.dragHandleProps}>
+                            ⋮⋮
+                          </div>
+                          <span className="data-item__name">{item.name}</span>
+                          <div className="data-item__actions">
+                            <Button
+                              variant="danger"
+                              size="small"
+                              onClick={() => handleDeleteData(item.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </div>
-                        <span className="data-item__name">{item.name}</span>
-                        <div className="data-item__actions">
-                          <Button
-                            variant="danger"
-                            size="small"
-                            onClick={() => handleDeleteData(item.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
 
       <div className="project-page__section">
         <div className="project-page__header">

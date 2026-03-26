@@ -193,13 +193,13 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
   if (!project || !project.columns || project.columns.length === 0) {
     return (
       <div className="respondent-page" style={{
-        backgroundColor: '#f5f7fa',
-        color: '#2c3e50'
+        backgroundColor: project?.bg_color || '#f5f7fa',
+        color: project?.text_color || '#2c3e50'
       }}>
         <div className="respondent-page__error">
-          <h2>Invalid Survey</h2>
-          <p>This survey is not properly configured. Missing columns.</p>
-          <p>Please contact the survey administrator.</p>
+          <h2 style={{ color: project?.text_color || '#2c3e50' }}>Invalid Survey</h2>
+          <p style={{ color: project?.text_color || '#2c3e50' }}>This survey is not properly configured. Missing columns.</p>
+          <p style={{ color: project?.text_color || '#2c3e50' }}>Please contact the survey administrator.</p>
         </div>
       </div>
     );
@@ -220,12 +220,25 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         backgroundColor: project.card_color || '#ffffff',
         color: project.text_color || '#2c3e50'
       }}>
-        <h1 className="respondent-page__title">{project.project}</h1>
+        <h1 className="respondent-page__title" style={{ color: project.text_color || '#2c3e50' }}>
+          {project.project}
+        </h1>
         
         {project.links && project.links.length > 0 && (
           <div className="respondent-page__links">
             {project.links.map((link, index) => (
-              <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="respondent-page__link">
+              <a 
+                key={index} 
+                href={link} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="respondent-page__link"
+                style={{ 
+                  color: project.text_color || '#3498db',
+                  backgroundColor: `${project.text_color}10`,
+                  borderColor: `${project.text_color}30`
+                }}
+              >
                 {link}
               </a>
             ))}
@@ -234,7 +247,7 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
         <div className="respondent-page__form">
           <div className="form__field">
-            <label>Your Name:</label>
+            <label style={{ color: project.text_color || '#2c3e50' }}>Your Name:</label>
             <input
               type="text"
               value={respondentName}
@@ -242,13 +255,16 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
               placeholder="Enter your name"
               style={{
                 borderColor: project.text_color + '40',
-                color: project.text_color
+                color: project.text_color,
+                backgroundColor: `${project.card_color}`
               }}
             />
           </div>
 
-          <h3>Priority Order</h3>
-          <p className="priority-instruction">Please rank the following items in order of priority (1 = highest priority):</p>
+          <h3 style={{ color: project.text_color || '#2c3e50' }}>Priority Order</h3>
+          <p className="priority-instruction" style={{ color: project.text_color || '#7f8c8d' }}>
+            Please rank the following items in order of priority (1 = highest priority):
+          </p>
           <div className="priority-order__list">
             {order.map((orderItem, index) => {
               const column = columns.find(c => c.id === orderItem.column_id);
@@ -266,11 +282,14 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
                       max={order.length}
                       style={{
                         borderColor: project.text_color + '40',
-                        color: project.text_color
+                        color: project.text_color,
+                        backgroundColor: `${project.card_color}`
                       }}
                     />
                   </div>
-                  <div className="item__name">{column?.name || 'Unknown'}</div>
+                  <div className="item__name" style={{ color: project.text_color || '#2c3e50' }}>
+                    {column?.name || 'Unknown'}
+                  </div>
                   <div className="item__actions">
                     <Button
                       variant="secondary"

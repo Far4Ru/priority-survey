@@ -17,26 +17,26 @@ const DataTablePage = ({ project, onUpdate }) => {
   }, [project]);
 
   const calculateResults = () => {
-    if (!dataItems.length || !project.columns.length) return [];
+    if (!dataItems.length || !project.columns.length) return new Map();
 
-    const results = [];
+    const results = new Map();
     const sortedData = [...dataItems].sort((a, b) => a.position - b.position);
 
     sortedData.forEach((item) => {
       let totalScore = 0;
-      const columnScores = {};
+      const columnScores = new Map();
 
       project.columns.forEach(column => {
         const orderItem = item.order.find(o => o.column_id === column.id);
         if (orderItem) {
           const weight = column.final_position || column.position || 1;
           const score = orderItem.position * weight;
-          columnScores[column.id] = score;
+          columnScores.set(column.id, score);
           totalScore += score;
         }
       });
 
-      results.push({
+      results.set(item.id, {
         id: item.id,
         name: item.name,
         totalScore,
@@ -44,12 +44,17 @@ const DataTablePage = ({ project, onUpdate }) => {
       });
     });
 
-    const sortedResults = [...results].sort((a, b) => a.totalScore - b.totalScore);
-    
-    return sortedResults.map((result, idx) => ({
-      ...result,
-      finalRank: idx + 1,
-    }));
+    // Sort by totalScore for ranking
+    const sortedResults = Array.from(results.values()).sort((a, b) => a.totalScore - b.totalScore);
+    const rankedResults = new Map();
+    sortedResults.forEach((result, idx) => {
+      rankedResults.set(result.id, {
+        ...result,
+        finalRank: idx + 1,
+      });
+    });
+
+    return rankedResults;
   };
 
   const handleOrderChange = (dataId, columnId, value) => {
@@ -83,24 +88,37 @@ const DataTablePage = ({ project, onUpdate }) => {
     });
   };
 
-  const exportToCSV = () => {
-    const results = calculateResults();
-    const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
-      (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
-    );
+  const results = calculateResults();
+  const sortedDataItems = [...dataItems].sort((a, b) => a.position - b.position);
+  const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
+    (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
+  );
 
-    // Create headers
-    const headers = ['#', 'Name', ...sortedColumns.map(c => c.name), 'Total Score', 'Final Rank'];
+  const exportToCSV = () => {
+    // Create headers with data names
+    const headers = ['Column Name', ...sortedDataItems.map(item => item.name), 'Total Score', 'Final Rank'];
     
-    // Create rows
-    const rows = results.map((result, index) => {
-      const row = [
-        index + 1,
-        result.name,
-        ...sortedColumns.map(column => result.columnScores[column.id] || 0),
-        result.totalScore,
-        result.finalRank
-      ];
+    // Create rows for each column
+    const rows = sortedColumns.map(column => {
+      const row = [column.name];
+      
+      // Add scores for each data item
+      sortedDataItems.forEach(item => {
+        const orderItem = item.order.find(o => o.column_id === column.id);
+        row.push(orderItem?.position || 1);
+      });
+      
+      // Add total score and rank (calculated per column)
+      let totalScore = 0;
+      sortedDataItems.forEach(item => {
+        const orderItem = item.order.find(o => o.column_id === column.id);
+        if (orderItem) {
+          totalScore += orderItem.position;
+        }
+      });
+      row.push(totalScore);
+      row.push('-'); // Rank placeholder
+      
       return row;
     });
 
@@ -115,17 +133,12 @@ const DataTablePage = ({ project, onUpdate }) => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.setAttribute('download', `${project.project}_results.csv`);
+    link.setAttribute('download', `${project.project}_data_table.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-
-  const results = calculateResults();
-  const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
-    (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
-  );
 
   if (!project || !project.columns || project.columns.length === 0) {
     return (
@@ -161,11 +174,10 @@ const DataTablePage = ({ project, onUpdate }) => {
       <div className="data-table__container">
         <div className="data-table">
           <div className="data-table__header">
-            <div className="header__cell">#</div>
-            <div className="header__cell">Name</div>
-            {sortedColumns.map(column => (
-              <div key={column.id} className="header__cell">
-                {column.name}
+            <div className="header__cell">Column Name</div>
+            {sortedDataItems.map(item => (
+              <div key={item.id} className="header__cell">
+                {item.name}
               </div>
             ))}
             <div className="header__cell">Total Score</div>
@@ -173,16 +185,24 @@ const DataTablePage = ({ project, onUpdate }) => {
           </div>
 
           <div className="data-table__body">
-            {dataItems.map((item, index) => {
-              const result = results.find(r => r.id === item.id);
+            {sortedColumns.map(column => {
+              // Calculate total score for this column across all data items
+              let totalScore = 0;
+              sortedDataItems.forEach(item => {
+                const orderItem = item.order.find(o => o.column_id === column.id);
+                if (orderItem) {
+                  totalScore += orderItem.position;
+                }
+              });
+              
               return (
-                <div key={item.id} className="data-table__row">
-                  <div className="row__cell">{index + 1}</div>
-                  <div className="row__cell row__cell--name">{item.name}</div>
-                  {sortedColumns.map(column => {
+                <div key={column.id} className="data-table__row">
+                  <div className="row__cell row__cell--column-name">{column.name}</div>
+                  {sortedDataItems.map(item => {
                     const orderItem = item.order.find(o => o.column_id === column.id);
+                    const result = results.get(item.id);
                     return (
-                      <div key={column.id} className="row__cell">
+                      <div key={item.id} className="row__cell">
                         <input
                           type="number"
                           value={orderItem?.position || 1}
@@ -193,8 +213,8 @@ const DataTablePage = ({ project, onUpdate }) => {
                       </div>
                     );
                   })}
-                  <div className="row__cell row__cell--score">{result?.totalScore || 0}</div>
-                  <div className="row__cell row__cell--rank">{result?.finalRank || '-'}</div>
+                  <div className="row__cell row__cell--score">{totalScore}</div>
+                  <div className="row__cell row__cell--rank">-</div>
                 </div>
               );
             })}
