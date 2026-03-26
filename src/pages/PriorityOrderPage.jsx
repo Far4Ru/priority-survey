@@ -21,7 +21,6 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './PriorityOrderPage.scss';
 
-// Компонент для сортируемого элемента
 const SortableItem = ({ item, index, column, onPositionChange, onMove, totalItems }) => {
   const {
     attributes,
@@ -43,8 +42,9 @@ const SortableItem = ({ item, index, column, onPositionChange, onMove, totalItem
       ref={setNodeRef}
       style={style}
       className={`priority-order__item ${isDragging ? 'dragging' : ''}`}
+       {...attributes} {...listeners}
     >
-      <div className="item__drag-handle" {...attributes} {...listeners}>
+      <div className="item__drag-handle">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <circle cx="6" cy="5" r="1.5" fill="#999" />
           <circle cx="6" cy="10" r="1.5" fill="#999" />
@@ -94,11 +94,10 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
   const [currentData, setCurrentData] = useState(null);
   const [items, setItems] = useState([]);
 
-  // Настройка сенсоров для dnd-kit
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Минимальное расстояние для начала drag
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -106,7 +105,6 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
     })
   );
 
-  // Загружаем данные при изменении project или selectedDataId
   useEffect(() => {
     if (project && project.data && project.data.length > 0 && !selectedDataId) {
       setSelectedDataId(project.data[0].id);
@@ -121,12 +119,13 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
           .sort((a, b) => a.position - b.position)
           .map((item, idx) => ({
             ...item,
-            id: `${item.column_id}-${Date.now()}-${idx}`, // Уникальный ID для dnd-kit
+            id: `${item.column_id}-${Date.now()}-${idx}`,
             originalPosition: item.position,
           }));
         setItems(sortedItems);
       } else if (data && project.columns && project.columns.length > 0) {
-        // Создаем начальный порядок
+        // Automatically create default order when data exists without order
+        // This ensures all data items have a valid order structure even if not explicitly defined
         const initialOrder = project.columns.map((column, idx) => ({
           column_id: column.id,
           position: idx + 1,
@@ -134,7 +133,6 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
         }));
         setItems(initialOrder);
 
-        // Обновляем данные
         const updatedData = project.data.map(dataItem =>
           dataItem.id === selectedDataId
             ? {
@@ -157,7 +155,6 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
     }
   }, [project, selectedDataId, onUpdate]);
 
-  // Обработчик окончания drag&drop
   const handleDragEnd = useCallback(
     (event) => {
       const { active, over } = event;
@@ -168,7 +165,6 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
 
         const newItems = arrayMove(items, oldIndex, newIndex);
 
-        // Обновляем позиции
         const updatedItems = newItems.map((item, idx) => ({
           ...item,
           position: idx + 1,
@@ -176,7 +172,6 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
 
         setItems(updatedItems);
 
-        // Обновляем данные в project
         if (currentData && project) {
           const updatedOrder = updatedItems.map(({ column_id, position }) => ({
             column_id,
@@ -281,6 +276,8 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
       id: Date.now(),
       name: newDataName,
       position: (project.data?.length || 0) + 1,
+      // New data items always get default order based on current columns
+      // This maintains consistency - order structure is tied to columns, not data items
       order: (project.columns || []).map((column, idx) => ({
         column_id: column.id,
         position: idx + 1,
@@ -301,6 +298,8 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
     (dataId) => {
       if (window.confirm('Delete this data item?')) {
         const updatedData = project.data.filter(item => item.id !== dataId);
+        // Reorder positions after deletion to maintain sequential numbering
+        // Prevents gaps in position numbers (1,2,4,5) and keeps them sequential (1,2,3,4)
         const reorderedData = updatedData.map((item, idx) => ({
           ...item,
           position: idx + 1,
@@ -323,10 +322,8 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
     [project, selectedDataId, onUpdate]
   );
 
-  // Получаем ID элементов для SortableContext
   const itemIds = useMemo(() => items.map(item => item.id), [items]);
 
-  // Проверка наличия данных
   if (!project || !project.columns || project.columns.length === 0) {
     return (
       <div className="priority-order-page">
