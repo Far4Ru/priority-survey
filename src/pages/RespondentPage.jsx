@@ -1,13 +1,122 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './RespondentPage.scss';
+
+// Компонент для сортируемого элемента приоритета
+const SortablePriorityItem = ({ item, index, column, onPositionChange, onMove, totalItems, textColor, bgColor, cardColor }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`priority-order__item ${isDragging ? 'dragging' : ''}`}
+    >
+      <div className="item__drag-handle" {...attributes} {...listeners}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="6" cy="5" r="1.5" fill={textColor || '#999'} />
+          <circle cx="6" cy="10" r="1.5" fill={textColor || '#999'} />
+          <circle cx="6" cy="15" r="1.5" fill={textColor || '#999'} />
+          <circle cx="14" cy="5" r="1.5" fill={textColor || '#999'} />
+          <circle cx="14" cy="10" r="1.5" fill={textColor || '#999'} />
+          <circle cx="14" cy="15" r="1.5" fill={textColor || '#999'} />
+        </svg>
+      </div>
+      <div className="item__position">
+        <input
+          type="number"
+          value={item.position}
+          onChange={(e) => onPositionChange(index, e.target.value)}
+          min="1"
+          max={totalItems}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            borderColor: textColor + '40',
+            color: textColor,
+            backgroundColor: cardColor
+          }}
+        />
+      </div>
+      <div className="item__name" style={{ color: textColor }}>
+        {column?.name || 'Unknown'}
+      </div>
+      <div className="item__actions">
+        <button
+          className="move-button"
+          onClick={() => onMove(index, 'up')}
+          disabled={index === 0}
+          style={{
+            borderColor: textColor + '40',
+            color: textColor
+          }}
+        >
+          ↑
+        </button>
+        <button
+          className="move-button"
+          onClick={() => onMove(index, 'down')}
+          disabled={index === totalItems - 1}
+          style={{
+            borderColor: textColor + '40',
+            color: textColor
+          }}
+        >
+          ↓
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const RespondentPage = ({ project, onUpdate, onComplete }) => {
   const [respondentName, setRespondentName] = useState('');
   const [order, setOrder] = useState([]);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [columns, setColumns] = useState([]);
+
+  // Настройка сенсоров для dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (project && project.columns) {
@@ -17,12 +126,19 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
       setColumns(sortedColumns);
       
       // Initialize order from project data
-      if (project.data && project.data.order) {
-        setOrder(project.data.order);
+      if (project.data && project.data.order && project.data.order.length > 0) {
+        const sortedOrder = [...project.data.order].sort((a, b) => a.position - b.position);
+        // Добавляем уникальные ID для dnd-kit
+        const orderWithId = sortedOrder.map((item, idx) => ({
+          ...item,
+          id: `priority-${item.column_id}-${idx}`,
+        }));
+        setOrder(orderWithId);
       } else if (sortedColumns.length > 0) {
         const initialOrder = sortedColumns.map((col, idx) => ({
           column_id: col.id,
-          position: idx + 1
+          position: idx + 1,
+          id: `priority-${col.id}-${idx}`,
         }));
         setOrder(initialOrder);
         
@@ -30,7 +146,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         if (project.data) {
           const updatedData = {
             ...project.data,
-            order: initialOrder
+            order: initialOrder.map(({ column_id, position }) => ({
+              column_id,
+              position
+            }))
           };
           onUpdate({
             ...project,
@@ -41,14 +160,13 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     }
   }, [project]);
 
-  const handleMove = (index, direction) => {
+  const handleMove = useCallback((index, direction) => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= order.length) return;
 
-    const items = Array.from(order);
-    [items[index], items[newIndex]] = [items[newIndex], items[index]];
-
-    const updatedOrder = items.map((item, idx) => ({
+    const newOrder = arrayMove(order, index, newIndex);
+    
+    const updatedOrder = newOrder.map((item, idx) => ({
       ...item,
       position: idx + 1,
     }));
@@ -59,24 +177,27 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     if (project.data) {
       const updatedData = {
         ...project.data,
-        order: updatedOrder
+        order: updatedOrder.map(({ column_id, position }) => ({
+          column_id,
+          position
+        }))
       };
       onUpdate({
         ...project,
         data: updatedData
       });
     }
-  };
+  }, [order, project, onUpdate]);
 
-  const handlePositionChange = (index, value) => {
+  const handlePositionChange = useCallback((index, value) => {
     const position = parseInt(value);
     if (isNaN(position) || position < 1 || position > order.length) return;
 
-    const items = Array.from(order);
-    const [movedItem] = items.splice(index, 1);
-    items.splice(position - 1, 0, movedItem);
+    const newOrder = Array.from(order);
+    const [movedItem] = newOrder.splice(index, 1);
+    newOrder.splice(position - 1, 0, movedItem);
 
-    const updatedOrder = items.map((item, idx) => ({
+    const updatedOrder = newOrder.map((item, idx) => ({
       ...item,
       position: idx + 1,
     }));
@@ -87,14 +208,50 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     if (project.data) {
       const updatedData = {
         ...project.data,
-        order: updatedOrder
+        order: updatedOrder.map(({ column_id, position }) => ({
+          column_id,
+          position
+        }))
       };
       onUpdate({
         ...project,
         data: updatedData
       });
     }
-  };
+  }, [order, project, onUpdate]);
+
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = order.findIndex((item) => item.id === active.id);
+      const newIndex = order.findIndex((item) => item.id === over.id);
+
+      const newOrder = arrayMove(order, oldIndex, newIndex);
+      
+      const updatedOrder = newOrder.map((item, idx) => ({
+        ...item,
+        position: idx + 1,
+      }));
+
+      setOrder(updatedOrder);
+      
+      // Update project data
+      if (project.data) {
+        const updatedData = {
+          ...project.data,
+          order: updatedOrder.map(({ column_id, position }) => ({
+            column_id,
+            position
+          }))
+        };
+        onUpdate({
+          ...project,
+          data: updatedData
+        });
+      }
+    }
+  }, [order, project, onUpdate]);
 
   const handleComplete = () => {
     if (!respondentName.trim()) {
@@ -109,7 +266,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         id: Date.now(),
         name: respondentName,
         position: 1,
-        order: order
+        order: order.map(({ column_id, position }) => ({
+          column_id,
+          position
+        }))
       };
       
       onUpdate({
@@ -135,7 +295,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         id: Date.now(),
         name: respondentName,
         position: 1,
-        order: order,
+        order: order.map(({ column_id, position }) => ({
+          column_id,
+          position
+        })),
       },
     };
 
@@ -165,7 +328,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         id: Date.now(),
         name: respondentName,
         position: 1,
-        order: order,
+        order: order.map(({ column_id, position }) => ({
+          column_id,
+          position
+        })),
       },
     };
 
@@ -188,6 +354,9 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     setShowCompleteModal(false);
     onComplete();
   };
+
+  // Получаем ID элементов для SortableContext
+  const itemIds = useMemo(() => order.map(item => item.id), [order]);
 
   // Validate that project has columns
   if (!project || !project.columns || project.columns.length === 0) {
@@ -265,53 +434,37 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
           <p className="priority-instruction" style={{ color: project.text_color || '#7f8c8d' }}>
             Please rank the following items in order of priority (1 = highest priority):
           </p>
-          <div className="priority-order__list">
-            {order.map((orderItem, index) => {
-              const column = columns.find(c => c.id === orderItem.column_id);
-              return (
-                <div key={orderItem.column_id} className="priority-order__item" style={{
-                  backgroundColor: project.bg_color + '30',
-                  borderColor: project.text_color + '20'
-                }}>
-                  <div className="item__position">
-                    <input
-                      type="number"
-                      value={orderItem.position}
-                      onChange={(e) => handlePositionChange(index, e.target.value)}
-                      min="1"
-                      max={order.length}
-                      style={{
-                        borderColor: project.text_color + '40',
-                        color: project.text_color,
-                        backgroundColor: `${project.card_color}`
-                      }}
+          
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={itemIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="priority-order__list">
+                {order.map((orderItem, index) => {
+                  const column = columns.find(c => c.id === orderItem.column_id);
+                  return (
+                    <SortablePriorityItem
+                      key={orderItem.id}
+                      item={orderItem}
+                      index={index}
+                      column={column}
+                      onPositionChange={handlePositionChange}
+                      onMove={handleMove}
+                      totalItems={order.length}
+                      textColor={project.text_color}
+                      bgColor={project.bg_color}
+                      cardColor={project.card_color}
                     />
-                  </div>
-                  <div className="item__name" style={{ color: project.text_color || '#2c3e50' }}>
-                    {column?.name || 'Unknown'}
-                  </div>
-                  <div className="item__actions">
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => handleMove(index, 'up')}
-                      disabled={index === 0}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => handleMove(index, 'down')}
-                      disabled={index === order.length - 1}
-                    >
-                      ↓
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           <Button variant="primary" size="large" onClick={handleComplete} className="submit-button">
             Complete Survey

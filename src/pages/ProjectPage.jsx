@@ -1,8 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './ProjectPage.scss';
+
+// Компонент для сортируемого элемента данных
+const SortableDataItem = ({ item, index, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`project-page__data-item ${isDragging ? 'dragging' : ''}`}
+    >
+      <div className="data-item__drag-handle" {...attributes} {...listeners}>
+        ⋮⋮
+      </div>
+      <span className="data-item__name">{item.name}</span>
+      <div className="data-item__actions">
+        <Button
+          variant="danger"
+          size="small"
+          onClick={() => onDelete(item.id)}
+        >
+          Delete
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const ProjectPage = ({ project, onUpdate }) => {
   const [editingColumn, setEditingColumn] = useState(null);
@@ -13,9 +70,28 @@ const ProjectPage = ({ project, onUpdate }) => {
   const [newLink, setNewLink] = useState('');
   const [dataItems, setDataItems] = useState([]);
 
+  // Настройка сенсоров для dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     if (project && project.data) {
-      setDataItems([...project.data].sort((a, b) => a.position - b.position));
+      const sortedData = [...project.data].sort((a, b) => a.position - b.position);
+      // Добавляем уникальные ID для dnd-kit
+      const itemsWithId = sortedData.map((item, idx) => ({
+        ...item,
+        id: `data-${item.id}-${idx}`,
+        originalId: item.id,
+      }));
+      setDataItems(itemsWithId);
     }
   }, [project]);
 
@@ -110,24 +186,37 @@ const ProjectPage = ({ project, onUpdate }) => {
     }
   };
 
-  const handleDataDragEnd = (result) => {
-    if (!result.destination) return;
+  const handleDataDragEnd = useCallback((event) => {
+    const { active, over } = event;
 
-    const items = Array.from(dataItems);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    if (active.id !== over.id) {
+      const oldIndex = dataItems.findIndex((item) => item.id === active.id);
+      const newIndex = dataItems.findIndex((item) => item.id === over.id);
 
-    const updatedData = items.map((item, idx) => ({
-      ...item,
-      position: idx + 1,
-    }));
+      const newItems = arrayMove(dataItems, oldIndex, newIndex);
+      
+      // Обновляем позиции
+      const updatedItems = newItems.map((item, idx) => ({
+        ...item,
+        position: idx + 1,
+      }));
 
-    setDataItems(updatedData);
-    onUpdate({
-      ...project,
-      data: updatedData,
-    });
-  };
+      setDataItems(updatedItems);
+      
+      // Обновляем данные в проекте, сохраняя оригинальные ID
+      const updatedData = updatedItems.map(({ originalId, name, position, order }) => ({
+        id: originalId,
+        name,
+        position,
+        order,
+      }));
+      
+      onUpdate({
+        ...project,
+        data: updatedData,
+      });
+    }
+  }, [dataItems, project, onUpdate]);
 
   const exportRespondentFile = () => {
     // Create a complete respondent survey file with all project configuration
@@ -163,6 +252,9 @@ const ProjectPage = ({ project, onUpdate }) => {
     URL.revokeObjectURL(url);
     alert('Respondent survey file downloaded! Share this file with respondents.');
   };
+
+  // Получаем ID элементов для SortableContext
+  const itemIds = useMemo(() => dataItems.map(item => item.id), [dataItems]);
 
   return (
     <div className="project-page">
@@ -279,44 +371,27 @@ const ProjectPage = ({ project, onUpdate }) => {
             Add Data Item
           </Button>
         </div>
-          <DragDropContext onDragEnd={handleDataDragEnd}>
-            <Droppable droppableId="project-data-droppable">
-              {(provided, snapshot) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className={`project-page__data-items ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
-                >
-                  {dataItems.map((item, index) => (
-                    <Draggable key={item.id} draggableId={`project-data-${item.id}`} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`project-page__data-item ${snapshot.isDragging ? 'dragging' : ''}`}
-                        >
-                          <div className="data-item__drag-handle" {...provided.dragHandleProps}>
-                            ⋮⋮
-                          </div>
-                          <span className="data-item__name">{item.name}</span>
-                          <div className="data-item__actions">
-                            <Button
-                              variant="danger"
-                              size="small"
-                              onClick={() => handleDeleteData(item.id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDataDragEnd}
+          >
+            <SortableContext
+              items={itemIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="project-page__data-items">
+                {dataItems.map((item, index) => (
+                  <SortableDataItem
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    onDelete={handleDeleteData}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
       <div className="project-page__section">
