@@ -84,6 +84,31 @@
       font-size: 1.1rem;
     }
   }
+  
+  &__empty {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 1rem;
+    
+    h2 {
+      color: #7f8c8d;
+      margin-bottom: 1rem;
+    }
+    
+    p {
+      color: #95a5a6;
+    }
+  }
+  
+  &__add-hint {
+    margin-top: 1rem;
+    text-align: center;
+    padding: 1rem;
+    background: #fff3cd;
+    border-radius: 0.5rem;
+    color: #856404;
+  }
 }
 
 @media (max-width: 768px) {

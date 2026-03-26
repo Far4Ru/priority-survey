@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import './DataTablePage.scss';
 
 const DataTablePage = ({ project, onUpdate }) => {
-  const [dataItems, setDataItems] = useState(project.data);
+  const [dataItems, setDataItems] = useState([]);
+
+  useEffect(() => {
+    if (project && project.data) {
+      // Ensure all data items have proper order arrays
+      const initializedData = project.data.map(item => ({
+        ...item,
+        order: item.order || [],
+        position: item.position || 1
+      }));
+      setDataItems(initializedData);
+    }
+  }, [project]);
 
   // Calculate positions based on order and column priorities
   const calculateResults = () => {
+    if (!dataItems.length || !project.columns.length) return [];
+
     const results = [];
 
     // Sort data by position
@@ -20,7 +34,7 @@ const DataTablePage = ({ project, onUpdate }) => {
       project.columns.forEach(column => {
         const orderItem = item.order.find(o => o.column_id === column.id);
         if (orderItem) {
-          const weight = column.final_position;
+          const weight = column.final_position || column.position || 1;
           const score = orderItem.position * weight;
           columnScores[column.id] = score;
           totalScore += score;
@@ -71,11 +85,19 @@ const DataTablePage = ({ project, onUpdate }) => {
 
     const updatedData = dataItems.map(item => {
       if (item.id === dataId) {
-        const updatedOrder = item.order.map(order =>
-          order.column_id === columnId
-            ? { ...order, position }
-            : order
-        );
+        const existingOrder = item.order.find(o => o.column_id === columnId);
+        let updatedOrder;
+        
+        if (existingOrder) {
+          updatedOrder = item.order.map(order =>
+            order.column_id === columnId
+              ? { ...order, position }
+              : order
+          );
+        } else {
+          updatedOrder = [...item.order, { column_id: columnId, position }];
+        }
+        
         return { ...item, order: updatedOrder };
       }
       return item;
@@ -89,7 +111,18 @@ const DataTablePage = ({ project, onUpdate }) => {
   };
 
   const results = calculateResults();
-  const sortedColumns = [...project.columns].sort((a, b) => a.final_position - b.final_position);
+  const sortedColumns = [...(project?.columns || [])].sort((a, b) => (a.final_position || a.position || 0) - (b.final_position || b.position || 0));
+
+  if (!project || !project.columns || project.columns.length === 0) {
+    return (
+      <div className="data-table-page">
+        <div className="data-table__empty">
+          <h2>No Data Available</h2>
+          <p>Please add columns and data in the Project page first.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="data-table-page">
@@ -105,6 +138,7 @@ const DataTablePage = ({ project, onUpdate }) => {
                 className="data-table"
               >
                 <div className="data-table__header">
+                  <div className="header__cell"></div>
                   <div className="header__cell">#</div>
                   <div className="header__cell">Name</div>
                   {sortedColumns.map(column => (
@@ -158,6 +192,12 @@ const DataTablePage = ({ project, onUpdate }) => {
           </Droppable>
         </DragDropContext>
       </div>
+
+      {dataItems.length === 0 && (
+        <div className="data-table__add-hint">
+          <p>No data items yet. Add data items to start prioritizing.</p>
+        </div>
+      )}
     </div>
   );
 };

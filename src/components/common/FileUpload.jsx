@@ -32,9 +32,17 @@ const FileUpload = ({ children, onFileLoad, accept = '.json' }) => {
   };
 
   const handleFile = (file) => {
+    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+      alert('Please upload a JSON file');
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onload = (e) => {
       onFileLoad(e.target.result);
+    };
+    reader.onerror = () => {
+      alert('Error reading file');
     };
     reader.readAsText(file);
   };

@@ -77,4 +77,26 @@
       gap: 0.5rem;
     }
   }
+  
+  &__empty {
+    text-align: center;
+    padding: 2rem;
+    color: #95a5a6;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+  }
+}
+
+.modal__input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e4e8;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  
+  &:focus {
+    outline: none;
+    border-color: #3498db;
+  }
 }
