@@ -1,37 +1,55 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import FileUpload from '../components/common/FileUpload';
 import './HomePage.scss';
 
-const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
+const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [showNewDataModal, setShowNewDataModal] = useState(false);
   const [newDataName, setNewDataName] = useState('');
-  const fileInputRef = useRef(null);
+  const [showRespondentUpload, setShowRespondentUpload] = useState(false);
 
   const handleFileLoad = (content) => {
     try {
       const parsed = JSON.parse(content);
-      if (parsed.project !== undefined && parsed.columns !== undefined && parsed.data !== undefined) {
-        onLoad(parsed);
+      if (parsed.role === 'respondent') {
+        // Handle respondent data
+        if (parsed.project && parsed.data) {
+          onLoad(parsed);
+          setUserRole('respondent');
+          alert('Respondent survey loaded successfully!');
+        } else {
+          alert('Invalid respondent file format.');
+        }
+      } else if (parsed.project !== undefined && parsed.columns !== undefined && parsed.data !== undefined) {
+        // Admin project
+        const adminProject = { ...parsed, role: 'admin' };
+        onLoad(adminProject);
+        setUserRole('admin');
         alert('Project loaded successfully!');
       } else {
-        alert('Invalid project file format. Missing required fields.');
+        alert('Invalid project file format.');
       }
     } catch (e) {
-      alert('Failed to parse project file. Please make sure it\'s a valid JSON file.');
+      alert('Failed to parse file.');
     }
   };
 
   const handleNewProject = () => {
     const newProject = {
       project: 'New Project',
-      link: '',
+      role: 'admin',
+      links: [],
+      bg_color: '#f5f7fa',
+      text_color: '#2c3e50',
+      card_color: '#ffffff',
+      image_url: '',
       columns: [],
       data: [],
     };
     onLoad(newProject);
+    setUserRole('admin');
     setShowNewProjectModal(false);
     alert('New project created!');
   };
@@ -64,7 +82,29 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
     
     setNewDataName('');
     setShowNewDataModal(false);
-    alert('Data item added successfully!');
+    onNavigate('priority');
+    alert('Data item added! Redirecting to Priority Order...');
+  };
+
+  const handleRespondentUpload = (content) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.role === 'respondent' && parsed.project === project?.project) {
+        // Add respondent data to project data array
+        const updatedData = [...(project.data || []), parsed.data];
+        const updatedProject = {
+          ...project,
+          data: updatedData,
+        };
+        onLoad(updatedProject);
+        alert('Respondent data added successfully!');
+        setShowRespondentUpload(false);
+      } else {
+        alert('Project name mismatch or invalid respondent file.');
+      }
+    } catch (e) {
+      alert('Failed to load respondent file.');
+    }
   };
 
   const handleExport = () => {
@@ -84,11 +124,35 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
 
   const handleClearProject = () => {
     onClear();
+    setUserRole(null);
     alert('Project cleared successfully!');
   };
 
   return (
     <div className="home-page">
+      {project && (
+        <div className="home-page__nav-bar">
+          <div className="nav-bar__buttons">
+            <Button variant="primary" size="small" onClick={() => onNavigate('project')}>
+              Settings
+            </Button>
+            {project.columns && project.columns.length > 0 && (
+              <>
+                <Button variant="primary" size="small" onClick={() => onNavigate('priority')}>
+                  Priority
+                </Button>
+                <Button variant="primary" size="small" onClick={() => onNavigate('data')}>
+                  Data
+                </Button>
+              </>
+            )}
+            <Button variant="danger" size="small" onClick={handleClearProject}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="home-page__container">
         <h1 className="home-page__title">Priority Survey Tool</h1>
         <p className="home-page__subtitle">Create and manage priority assessment surveys</p>
@@ -100,16 +164,19 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
               <div className="upload-area__text">
                 <strong>Drag & Drop</strong> or <strong>click to browse</strong>
               </div>
-              <div className="upload-area__hint">Upload JSON project file</div>
+              <div className="upload-area__hint">Upload JSON project or respondent file</div>
             </div>
           </FileUpload>
 
-          {project && (
+          {project && project.role === 'admin' && (
             <>
-              <Button variant="secondary" size="large" onClick={handleExport} className="home-page__button">
+              <Button variant="secondary" size="large" onClick={handleExport}>
                 📥 Download Project
               </Button>
-              <Button variant="success" size="large" onClick={() => setShowNewDataModal(true)} className="home-page__button">
+              <Button variant="success" size="large" onClick={() => setShowRespondentUpload(true)}>
+                📤 Load Respondent Data
+              </Button>
+              <Button variant="success" size="large" onClick={() => setShowNewDataModal(true)}>
                 ➕ Create New Data Item
               </Button>
             </>
@@ -119,77 +186,10 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
             variant={project ? "danger" : "primary"} 
             size="large" 
             onClick={() => setShowNewProjectModal(true)}
-            className="home-page__button"
           >
             ✨ Create New Project
           </Button>
-
-          {project && (
-            <>
-              <div className="home-page__divider">
-                <span>Project Navigation</span>
-              </div>
-              <div className="home-page__nav-buttons">
-                <Button 
-                  variant="primary" 
-                  size="medium" 
-                  onClick={() => onNavigate('project')}
-                  className="nav-button"
-                >
-                  ⚙️ Project Settings
-                </Button>
-                {project.columns && project.columns.length > 0 && (
-                  <>
-                    <Button 
-                      variant="primary" 
-                      size="medium" 
-                      onClick={() => onNavigate('priority')}
-                      className="nav-button"
-                    >
-                      📊 Priority Order
-                    </Button>
-                    <Button 
-                      variant="primary" 
-                      size="medium" 
-                      onClick={() => onNavigate('data')}
-                      className="nav-button"
-                    >
-                      📈 Data Table
-                    </Button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
         </div>
-
-        {project && (
-          <div className="home-page__info">
-            <div className="info-card">
-              <div className="info-card__title">Current Project</div>
-              <div className="info-card__name">{project.project}</div>
-              {project.link && (
-                <div className="info-card__link">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer">
-                    {project.link}
-                  </a>
-                </div>
-              )}
-              <div className="info-card__stats">
-                <span>📊 {project.columns?.length || 0} columns</span>
-                <span>📝 {project.data?.length || 0} data items</span>
-              </div>
-              <Button 
-                variant="danger" 
-                size="small" 
-                onClick={handleClearProject}
-                className="info-card__clear"
-              >
-                Clear Project
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       <Modal
@@ -202,13 +202,8 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
           Are you sure you want to create a new project?
         </p>
         <p className="modal__warning-message">
-          <strong>Warning:</strong> Current project data will be permanently deleted and cannot be recovered!
+          <strong>Warning:</strong> Current project data will be permanently deleted!
         </p>
-        {project && (
-          <div className="modal__current-project">
-            Current project: <strong>"{project.project}"</strong>
-          </div>
-        )}
         <div className="modal__actions">
           <Button variant="danger" onClick={handleNewProject}>
             Create New Project
@@ -245,6 +240,19 @@ const HomePage = ({ project, onLoad, onClear, onNavigate }) => {
             Cancel
           </Button>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={showRespondentUpload}
+        onClose={() => setShowRespondentUpload(false)}
+        title="Load Respondent Data"
+      >
+        <FileUpload onFileLoad={handleRespondentUpload}>
+          <div className="modal__upload-area">
+            <div className="upload-area__icon">📋</div>
+            <div className="upload-area__text">Click to upload respondent JSON file</div>
+          </div>
+        </FileUpload>
       </Modal>
     </div>
   );

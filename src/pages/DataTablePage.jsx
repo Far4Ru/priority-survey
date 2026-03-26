@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Button from '../components/common/Button';
 import './DataTablePage.scss';
 
 const DataTablePage = ({ project, onUpdate }) => {
@@ -82,6 +83,45 @@ const DataTablePage = ({ project, onUpdate }) => {
     });
   };
 
+  const exportToCSV = () => {
+    const results = calculateResults();
+    const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
+      (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
+    );
+
+    // Create headers
+    const headers = ['#', 'Name', ...sortedColumns.map(c => c.name), 'Total Score', 'Final Rank'];
+    
+    // Create rows
+    const rows = results.map((result, index) => {
+      const row = [
+        index + 1,
+        result.name,
+        ...sortedColumns.map(column => result.columnScores[column.id] || 0),
+        result.totalScore,
+        result.finalRank
+      ];
+      return row;
+    });
+
+    // Convert to CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `${project.project}_results.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const results = calculateResults();
   const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
     (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
@@ -111,7 +151,12 @@ const DataTablePage = ({ project, onUpdate }) => {
 
   return (
     <div className="data-table-page">
-      <h2>Priority Assessment Results</h2>
+      <div className="data-table__header-section">
+        <h2>Priority Assessment Results</h2>
+        <Button variant="primary" size="medium" onClick={exportToCSV}>
+          📊 Export to CSV
+        </Button>
+      </div>
       
       <div className="data-table__container">
         <div className="data-table">

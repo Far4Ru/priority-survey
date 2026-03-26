@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import FileUpload from '../components/common/FileUpload';
 import './ProjectPage.scss';
 
 const ProjectPage = ({ project, onUpdate }) => {
   const [editingColumn, setEditingColumn] = useState(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [newDataName, setNewDataName] = useState('');
+  const [newLink, setNewLink] = useState('');
   const [dataItems, setDataItems] = useState([]);
 
   useEffect(() => {
@@ -22,6 +25,27 @@ const ProjectPage = ({ project, onUpdate }) => {
       ...project,
       [field]: value,
     });
+  };
+
+  const handleAddLink = () => {
+    if (!newLink.trim()) return;
+    const updatedLinks = [...(project.links || []), newLink];
+    handleProjectUpdate('links', updatedLinks);
+    setNewLink('');
+    setShowLinkModal(false);
+  };
+
+  const handleRemoveLink = (index) => {
+    const updatedLinks = project.links.filter((_, i) => i !== index);
+    handleProjectUpdate('links', updatedLinks);
+  };
+
+  const handleImageUpload = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      handleProjectUpdate('image_url', e.target.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddColumn = () => {
@@ -47,7 +71,7 @@ const ProjectPage = ({ project, onUpdate }) => {
   };
 
   const handleDeleteColumn = (id) => {
-    if (window.confirm('Delete this column? This will affect all data.')) {
+    if (window.confirm('Delete this column?')) {
       onUpdate({
         ...project,
         columns: (project.columns || []).filter(col => col.id !== id),
@@ -126,14 +150,65 @@ const ProjectPage = ({ project, onUpdate }) => {
             onChange={(e) => handleProjectUpdate('project', e.target.value)}
           />
         </div>
+
         <div className="project-page__field">
-          <label>Project Link</label>
+          <label>Links</label>
+          <div className="links-list">
+            {(project.links || []).map((link, index) => (
+              <div key={index} className="link-item">
+                <a href={link} target="_blank" rel="noopener noreferrer">{link}</a>
+                <Button variant="danger" size="small" onClick={() => handleRemoveLink(index)}>
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+          <Button variant="secondary" size="small" onClick={() => setShowLinkModal(true)}>
+            Add Link
+          </Button>
+        </div>
+
+        <div className="project-page__field">
+          <label>Background Color</label>
           <input
-            type="text"
-            value={project.link || ''}
-            onChange={(e) => handleProjectUpdate('link', e.target.value)}
-            placeholder="https://..."
+            type="color"
+            value={project.bg_color || '#f5f7fa'}
+            onChange={(e) => handleProjectUpdate('bg_color', e.target.value)}
           />
+        </div>
+
+        <div className="project-page__field">
+          <label>Text Color</label>
+          <input
+            type="color"
+            value={project.text_color || '#2c3e50'}
+            onChange={(e) => handleProjectUpdate('text_color', e.target.value)}
+          />
+        </div>
+
+        <div className="project-page__field">
+          <label>Card Color</label>
+          <input
+            type="color"
+            value={project.card_color || '#ffffff'}
+            onChange={(e) => handleProjectUpdate('card_color', e.target.value)}
+          />
+        </div>
+
+        <div className="project-page__field">
+          <label>Banner Image</label>
+          <FileUpload onFileLoad={handleImageUpload} accept="image/*">
+            <div className="image-upload-area">
+              {project.image_url ? (
+                <img src={project.image_url} alt="Banner" className="banner-preview" />
+              ) : (
+                <div className="upload-placeholder">
+                  <div className="upload-icon">🖼️</div>
+                  <div>Click or drag to upload banner image</div>
+                </div>
+              )}
+            </div>
+          </FileUpload>
         </div>
       </div>
 
@@ -169,9 +244,6 @@ const ProjectPage = ({ project, onUpdate }) => {
               </div>
             </div>
           ))}
-          {(project.columns || []).length === 0 && (
-            <p className="project-page__empty">No columns yet. Click "Add Column" to get started.</p>
-          )}
         </div>
       </div>
 
@@ -183,12 +255,12 @@ const ProjectPage = ({ project, onUpdate }) => {
           </Button>
         </div>
         <DragDropContext onDragEnd={handleDataDragEnd}>
-          <Droppable droppableId="data-items">
-            {(provided) => (
+          <Droppable droppableId="project-data-items">
+            {(provided, snapshot) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="project-page__data-items"
+                className={`project-page__data-items ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
               >
                 {dataItems.map((item, index) => (
                   <Draggable key={item.id} draggableId={String(item.id)} index={index}>
@@ -220,16 +292,9 @@ const ProjectPage = ({ project, onUpdate }) => {
             )}
           </Droppable>
         </DragDropContext>
-        {dataItems.length === 0 && (
-          <p className="project-page__empty">No data items yet. Click "Add Data Item" to get started.</p>
-        )}
       </div>
 
-      <Modal
-        isOpen={showColumnModal}
-        onClose={() => setShowColumnModal(false)}
-        title="Edit Column"
-      >
+      <Modal isOpen={showColumnModal} onClose={() => setShowColumnModal(false)} title="Edit Column">
         {editingColumn && (
           <>
             <input
@@ -258,11 +323,7 @@ const ProjectPage = ({ project, onUpdate }) => {
         )}
       </Modal>
 
-      <Modal
-        isOpen={showDataModal}
-        onClose={() => setShowDataModal(false)}
-        title="Add Data Item"
-      >
+      <Modal isOpen={showDataModal} onClose={() => setShowDataModal(false)} title="Add Data Item">
         <input
           type="text"
           value={newDataName}
@@ -280,8 +341,26 @@ const ProjectPage = ({ project, onUpdate }) => {
           <Button variant="primary" onClick={handleAddData}>
             Add
           </Button>
-          <Button variant="secondary" onClick={() => setShowDataModal(false)}>
-            Cancel
+        </div>
+      </Modal>
+
+      <Modal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Add Link">
+        <input
+          type="url"
+          value={newLink}
+          onChange={(e) => setNewLink(e.target.value)}
+          placeholder="https://..."
+          className="modal__input"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleAddLink();
+            }
+          }}
+          autoFocus
+        />
+        <div className="modal__actions">
+          <Button variant="primary" onClick={handleAddLink}>
+            Add
           </Button>
         </div>
       </Modal>

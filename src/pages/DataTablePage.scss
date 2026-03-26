@@ -1,7 +1,16 @@
 .data-table-page {
-  h2 {
-    color: #2c3e50;
+  &__header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+    
+    h2 {
+      color: #2c3e50;
+      margin: 0;
+    }
   }
 }
 
@@ -115,6 +124,13 @@
 }
 
 @media (max-width: 768px) {
+  .data-table-page {
+    &__header-section {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+  
   .data-table__header .header__cell,
   .data-table__body .row__cell {
     font-size: 0.85rem;

@@ -162,9 +162,6 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
         <div className="priority-order__empty">
           <h2>No Columns Available</h2>
           <p>Please add columns in the Project Settings page first.</p>
-          <Button variant="primary" onClick={() => window.location.hash = '#/project'}>
-            Go to Project Settings
-          </Button>
         </div>
       </div>
     );
@@ -249,7 +246,7 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
 
       <div className="priority-order__content">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="columns-order">
+          <Droppable droppableId="priority-order-droppable">
             {(provided, snapshot) => (
               <div
                 {...provided.droppableProps}
@@ -261,7 +258,7 @@ const PriorityOrderPage = ({ project, onUpdate }) => {
                   return (
                     <Draggable 
                       key={orderItem.column_id} 
-                      draggableId={String(orderItem.column_id)} 
+                      draggableId={`priority-order-${orderItem.column_id}`} 
                       index={index}
                     >
                       {(provided, snapshot) => (
