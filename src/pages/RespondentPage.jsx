@@ -8,6 +8,7 @@ import {
   useSensors,
   defaultDropAnimation,
   DragOverlay,
+  TouchSensor,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -43,18 +44,18 @@ const SortablePriorityItem = ({
     isDragging,
   } = useSortable({
     id: item.id,
-    disabled: false, // Отключаем drag&drop во время редактирования
+    disabled: false,
   });
 
   const [localPosition, setLocalPosition] = useState(item.position);
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef(null);
+  const dragHandleRef = useRef(null);
 
   useEffect(() => {
     setLocalPosition(item.position);
   }, [item.position]);
 
-  // Фокус на инпут при активации редактирования
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -68,7 +69,6 @@ const SortablePriorityItem = ({
   };
 
   const handlePositionBlur = () => {
-    // Небольшая задержка, чтобы не конфликтовать с другими событиями
     setTimeout(() => {
       setIsEditing(false);
       if (localPosition !== item.position && localPosition !== '') {
@@ -80,10 +80,10 @@ const SortablePriorityItem = ({
   };
 
   const handlePositionKeyDown = (e) => {
-    e.stopPropagation(); // Останавливаем всплытие события
+    e.stopPropagation();
 
     if (e.key === 'Enter') {
-      e.preventDefault(); // Предотвращаем стандартное поведение
+      e.preventDefault();
       setIsEditing(false);
       if (localPosition !== item.position && localPosition !== '') {
         onPositionChange(index, localPosition);
@@ -99,23 +99,29 @@ const SortablePriorityItem = ({
 
   const handlePositionChangeLocal = (e) => {
     const value = e.target.value;
-    // Разрешаем ввод только чисел
     if (value === '' || /^\d+$/.test(value)) {
       setLocalPosition(value);
     }
   };
 
   const handleClickDisplay = (e) => {
-    e.stopPropagation(); // Останавливаем всплытие, чтобы не активировать drag
+    e.stopPropagation();
     setIsEditing(true);
   };
 
   const handleInputClick = (e) => {
-    e.stopPropagation(); // Останавливаем всплытие
+    e.stopPropagation();
   };
 
   const handleInputMouseDown = (e) => {
-    e.stopPropagation(); // Предотвращаем активацию drag при клике на инпут
+    e.stopPropagation();
+  };
+
+  // Предотвращаем запуск drag при касании инпута
+  const handleTouchStart = (e) => {
+    if (e.target.closest('.item__position input, .position-display')) {
+      e.stopPropagation();
+    }
   };
 
   return (
@@ -128,10 +134,14 @@ const SortablePriorityItem = ({
         backgroundColor: cardColor,
       }}
       className={`priority-order__item ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
-      {...attributes}
-      {...listeners}
+      onTouchStart={handleTouchStart}
     >
-      <div className="item__drag-handle">
+      <div
+        ref={dragHandleRef}
+        className="item__drag-handle"
+        {...attributes}
+        {...listeners}
+      >
         <GripVertical size={20}
           style={{
             color: textColor,
@@ -148,6 +158,7 @@ const SortablePriorityItem = ({
             onBlur={handlePositionBlur}
             onClick={handleInputClick}
             onMouseDown={handleInputMouseDown}
+            onTouchStart={handleInputMouseDown}
             min="1"
             max={totalItems}
             style={{
@@ -160,7 +171,8 @@ const SortablePriorityItem = ({
           <div
             className="position-display"
             onClick={handleClickDisplay}
-            onMouseDown={(e) => e.stopPropagation()} // Предотвращаем активацию drag
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             style={{
               borderColor: textColor + '40',
               color: textColor,
@@ -181,6 +193,10 @@ const SortablePriorityItem = ({
             e.stopPropagation();
             onMove(index, 'up');
           }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           disabled={index === 0}
           style={{
             borderColor: textColor + '40',
@@ -194,6 +210,10 @@ const SortablePriorityItem = ({
           onClick={(e) => {
             e.stopPropagation();
             onMove(index, 'down');
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
           disabled={index === totalItems - 1}
           style={{
@@ -215,12 +235,19 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
   const [columns, setColumns] = useState([]);
   const [activeId, setActiveId] = useState(null);
 
+  // Настройка сенсоров для мобильных устройств
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
-        delay: 100,
+        distance: 8, // Увеличиваем расстояние для активации на мобильных
+        delay: 200,  // Добавляем задержку для отличия от прокрутки
         tolerance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,      // Задержка перед активацией drag
+        tolerance: 8,    // Толерантность для предотвращения случайного drag
       },
     }),
     useSensor(KeyboardSensor, {
@@ -228,10 +255,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     })
   );
 
-  // Настройка анимации падения
+  // Настройка анимации падения для мобильных
   const dropAnimation = {
     ...defaultDropAnimation,
-    duration: 200,
+    duration: 250,
     easing: 'cubic-bezier(0.2, 0, 0, 1)',
   };
 
@@ -307,26 +334,20 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
   const handlePositionChange = useCallback(
     (index, value) => {
-      // Проверяем, что введено число
       if (!value || value.trim() === '') return;
 
       const newPosition = parseInt(value);
 
-      // Проверяем валидность позиции
       if (isNaN(newPosition)) return;
 
-      // Ограничиваем позицию в допустимых пределах
       const clampedPosition = Math.min(Math.max(newPosition, 1), order.length);
 
-      // Если позиция не изменилась, ничего не делаем
       if (clampedPosition === index + 1) return;
 
-      // Создаем новый массив с перемещенным элементом
       const newOrder = Array.from(order);
       const [movedItem] = newOrder.splice(index, 1);
       newOrder.splice(clampedPosition - 1, 0, movedItem);
 
-      // Обновляем позиции для всех элементов
       const updatedOrder = newOrder.map((item, idx) => ({
         ...item,
         position: idx + 1,
@@ -334,7 +355,6 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
       setOrder(updatedOrder);
 
-      // Сохраняем изменения в проекте
       if (project.data) {
         const updatedData = {
           ...project.data,
@@ -349,7 +369,6 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         });
       }
 
-      // Показываем уведомление об успешном изменении
       toast.success(`Позиция изменена на ${clampedPosition}`);
     },
     [order, project, onUpdate]
@@ -357,8 +376,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
   const handleDragStart = useCallback((event) => {
     setActiveId(event.active.id);
-    // Предотвращаем прокрутку страницы
+    // Предотвращаем прокрутку страницы во время drag
     document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.body.classList.add('dragging');
   }, []);
 
   const handleDragEnd = useCallback(
@@ -368,31 +389,35 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
       setActiveId(null);
       // Восстанавливаем прокрутку страницы
       document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.body.classList.remove('dragging');
 
-      if (active.id !== over.id) {
+      if (active.id !== over?.id) {
         const oldIndex = order.findIndex((item) => item.id === active.id);
-        const newIndex = order.findIndex((item) => item.id === over.id);
+        const newIndex = order.findIndex((item) => item.id === over?.id);
 
-        const newOrder = arrayMove(order, oldIndex, newIndex);
-        const updatedOrder = newOrder.map((item, idx) => ({
-          ...item,
-          position: idx + 1,
-        }));
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(order, oldIndex, newIndex);
+          const updatedOrder = newOrder.map((item, idx) => ({
+            ...item,
+            position: idx + 1,
+          }));
 
-        setOrder(updatedOrder);
+          setOrder(updatedOrder);
 
-        if (project.data) {
-          const updatedData = {
-            ...project.data,
-            order: updatedOrder.map(({ column_id, position }) => ({
-              column_id,
-              position,
-            })),
-          };
-          onUpdate({
-            ...project,
-            data: updatedData,
-          });
+          if (project.data) {
+            const updatedData = {
+              ...project.data,
+              order: updatedOrder.map(({ column_id, position }) => ({
+                column_id,
+                position,
+              })),
+            };
+            onUpdate({
+              ...project,
+              data: updatedData,
+            });
+          }
         }
       }
     },
@@ -402,6 +427,8 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
     document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.body.classList.remove('dragging');
   }, []);
 
   const handleComplete = () => {
@@ -515,7 +542,6 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
   const itemIds = useMemo(() => order.map((item) => item.id), [order]);
 
-  // Находим активный элемент для DragOverlay
   const activeItem = useMemo(() => {
     if (!activeId) return null;
     const activeOrderItem = order.find((item) => item.id === activeId);
@@ -662,7 +688,7 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
             <h3 style={{ color: project.text_color || '#1e293b' }}>Порядок приоритетов</h3>
             <p className="priority-instruction" style={{ color: project.text_color || '#64748b' }}>
-              Пожалуйста, расположите следующие пункты в порядке приоритета (1 = наивысший приоритет):
+              Нажмите и удерживайте иконку <GripVertical size={14} /> для перетаскивания
             </p>
 
             <DndContext
