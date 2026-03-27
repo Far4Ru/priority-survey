@@ -241,6 +241,8 @@ const SortablePriorityItem = ({
         color: textColor,
         backgroundColor: cardColor,
       }}
+      {...attributes}
+      {...listeners}
       className={`priority-order__item ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
       onTouchStart={handleTouchStart}
       data-id={item.id}
@@ -248,8 +250,6 @@ const SortablePriorityItem = ({
       <div
         ref={dragHandleRef}
         className="item__drag-handle"
-        {...attributes}
-        {...listeners}
       >
         <GripVertical size={20}
           style={{
@@ -624,7 +624,7 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     toast.success('Файл сохранен успешно!');
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const respondentData = {
       role: 'respondent',
       project: project.project,
@@ -646,25 +646,56 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     };
 
     const dataStr = JSON.stringify(respondentData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const file = new File([blob], `respondent_${project.project}_${respondentName}.json`, {
-      type: 'application/json',
-    });
+    const fileName = `respondent_${project.project}_${respondentName}.json`;
 
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator
-        .share({
+    try {
+      // Проверяем поддержку Web Share API
+      if (navigator.share) {
+        // Создаем файл из данных
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const file = new File([blob], fileName, { type: 'application/json' });
+
+        // Проверяем, можно ли поделиться файлом
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Ответ на опрос',
+            text: `Результаты оценки приоритетов от ${respondentName}`,
+            files: [file],
+          });
+          toast.success('Поделились успешно!');
+          return;
+        }
+      }
+
+      // Fallback: если Web Share API не поддерживается или не может поделиться файлом
+      // Пробуем поделиться текстом
+      if (navigator.share) {
+        await navigator.share({
           title: 'Ответ на опрос',
-          text: `Результаты оценки приоритетов от ${respondentName}`,
-          files: [file],
-        })
-        .then(() => toast.success('Поделились успешно!'))
-        .catch(() => toast.error('Не удалось поделиться'));
-    } else {
-      toast.error('Web Share API не поддерживается. Пожалуйста, используйте сохранение.');
+          text: `${respondentName} завершил(а) опрос по оценке приоритетов. Результаты сохранены в файле ${fileName}`,
+        });
+        toast.success('Поделились успешно!');
+        return;
+      }
+
+      // Если ничего не работает, предлагаем сохранить файл
+      toast.error('Поделиться не удалось. Файл будет сохранен локально.');
+      // Сохраняем файл
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Ошибка при попытке поделиться:', error);
+      toast.error('Не удалось поделиться. Попробуйте сохранить файл.');
     }
   };
-
   const handleFinish = () => {
     setShowCompleteModal(false);
     onComplete();
@@ -819,7 +850,7 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
             <h3 style={{ color: project.text_color || '#1e293b' }}>Порядок приоритетов</h3>
             <p className="priority-instruction" style={{ color: project.text_color || '#64748b' }}>
-              Нажмите и удерживайте иконку <GripVertical size={14} /> для перетаскивания
+              Пожалуйста, расположите следующие пункты в порядке приоритета (1 = наивысший приоритет):
             </p>
 
             <DndContext
