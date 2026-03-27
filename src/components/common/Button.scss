@@ -1,87 +1,91 @@
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   &--primary {
-    background: #3498db;
+    background: #3b82f6;
     color: white;
-    
+
     &:hover:not(:disabled) {
-      background: #2980b9;
+      background: #2563eb;
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     }
   }
-  
+
   &--secondary {
-    background: #95a5a6;
+    background: #64748b;
     color: white;
-    
+
     &:hover:not(:disabled) {
-      background: #7f8c8d;
+      background: #475569;
     }
   }
-  
+
   &--success {
-    background: #27ae60;
+    background: #10b981;
     color: white;
-    
+
     &:hover:not(:disabled) {
-      background: #229954;
+      background: #059669;
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     }
   }
-  
+
   &--danger {
-    background: #e74c3c;
+    background: #ef4444;
     color: white;
-    
+
     &:hover:not(:disabled) {
-      background: #c0392b;
+      background: #dc2626;
     }
   }
-  
+
   &--large {
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
+    padding: 12px 24px;
+    font-size: 16px;
   }
-  
+
   &--medium {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+    padding: 8px 16px;
+    font-size: 14px;
   }
-  
+
   &--small {
-    padding: 0.25rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 4px 12px;
+    font-size: 13px;
   }
 }
 
 @media (max-width: 768px) {
   .button {
     &--large {
-      padding: 0.6rem 1.2rem;
-      font-size: 0.9rem;
+      padding: 10px 20px;
+      font-size: 14px;
     }
-    
+
     &--medium {
-      padding: 0.4rem 0.8rem;
-      font-size: 0.85rem;
+      padding: 6px 12px;
+      font-size: 13px;
     }
-    
+
     &--small {
-      padding: 0.2rem 0.6rem;
-      font-size: 0.8rem;
+      padding: 4px 10px;
+      font-size: 12px;
     }
   }
 }

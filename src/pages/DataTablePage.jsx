@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 import Button from '../components/common/Button';
 import './DataTablePage.scss';
 
@@ -7,10 +8,10 @@ const DataTablePage = ({ project, onUpdate }) => {
 
   useEffect(() => {
     if (project && project.data) {
-      const initializedData = project.data.map(item => ({
+      const initializedData = project.data.map((item) => ({
         ...item,
         order: item.order || [],
-        position: item.position || 1
+        position: item.position || 1,
       }));
       setDataItems(initializedData);
     }
@@ -26,8 +27,8 @@ const DataTablePage = ({ project, onUpdate }) => {
       let totalScore = 0;
       const columnScores = new Map();
 
-      project.columns.forEach(column => {
-        const orderItem = item.order.find(o => o.column_id === column.id);
+      project.columns.forEach((column) => {
+        const orderItem = item.order.find((o) => o.column_id === column.id);
         if (orderItem) {
           const weight = column.final_position || column.position || 1;
           const score = orderItem.position * weight;
@@ -44,7 +45,7 @@ const DataTablePage = ({ project, onUpdate }) => {
       });
     });
 
-    // Sort by totalScore for ranking
+    // Sort by totalScore for ranking (lower score = higher priority)
     const sortedResults = Array.from(results.values()).sort((a, b) => a.totalScore - b.totalScore);
     const rankedResults = new Map();
     sortedResults.forEach((result, idx) => {
@@ -61,21 +62,19 @@ const DataTablePage = ({ project, onUpdate }) => {
     const position = parseInt(value);
     if (isNaN(position) || position < 1) return;
 
-    const updatedData = dataItems.map(item => {
+    const updatedData = dataItems.map((item) => {
       if (item.id === dataId) {
-        const existingOrder = item.order.find(o => o.column_id === columnId);
+        const existingOrder = item.order.find((o) => o.column_id === columnId);
         let updatedOrder;
-        
+
         if (existingOrder) {
-          updatedOrder = item.order.map(order =>
-            order.column_id === columnId
-              ? { ...order, position }
-              : order
+          updatedOrder = item.order.map((order) =>
+            order.column_id === columnId ? { ...order, position } : order
           );
         } else {
           updatedOrder = [...item.order, { column_id: columnId, position }];
         }
-        
+
         return { ...item, order: updatedOrder };
       }
       return item;
@@ -90,45 +89,36 @@ const DataTablePage = ({ project, onUpdate }) => {
 
   const results = calculateResults();
   const sortedDataItems = [...dataItems].sort((a, b) => a.position - b.position);
-  const sortedColumns = [...(project?.columns || [])].sort((a, b) => 
-    (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
+  const sortedColumns = [...(project?.columns || [])].sort(
+    (a, b) => (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
   );
 
   const exportToCSV = () => {
-    // Create headers with data names
-    const headers = ['Column Name', ...sortedDataItems.map(item => item.name), 'Total Score', 'Final Rank'];
-    
-    // Create rows for each column
-    const rows = sortedColumns.map(column => {
+    const headers = ['Название показателя', ...sortedDataItems.map((item) => item.name), 'Сумма балов', 'Итоговое место'];
+
+    const rows = sortedColumns.map((column) => {
       const row = [column.name];
-      
-      // Add scores for each data item
-      sortedDataItems.forEach(item => {
-        const orderItem = item.order.find(o => o.column_id === column.id);
+
+      sortedDataItems.forEach((item) => {
+        const orderItem = item.order.find((o) => o.column_id === column.id);
         row.push(orderItem?.position || 1);
       });
-      
-      // Add total score and rank (calculated per column)
+
       let totalScore = 0;
-      sortedDataItems.forEach(item => {
-        const orderItem = item.order.find(o => o.column_id === column.id);
+      sortedDataItems.forEach((item) => {
+        const orderItem = item.order.find((o) => o.column_id === column.id);
         if (orderItem) {
           totalScore += orderItem.position;
         }
       });
       row.push(totalScore);
-      row.push('-'); // Rank placeholder
-      
+      row.push('-');
+
       return row;
     });
 
-    // Convert to CSV
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
 
-    // Download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -144,8 +134,8 @@ const DataTablePage = ({ project, onUpdate }) => {
     return (
       <div className="data-table-page">
         <div className="data-table__empty">
-          <h2>No Data Available</h2>
-          <p>Please add columns in the Project Settings page first.</p>
+          <h2>Нет доступных данных</h2>
+          <p>Пожалуйста, сначала добавьте показатели на странице настроек проекта.</p>
         </div>
       </div>
     );
@@ -155,8 +145,8 @@ const DataTablePage = ({ project, onUpdate }) => {
     return (
       <div className="data-table-page">
         <div className="data-table__empty">
-          <h2>No Data Items</h2>
-          <p>Please add data items to start prioritizing.</p>
+          <h2>Нет элементов данных</h2>
+          <p>Пожалуйста, добавьте элементы данных для начала оценки приоритетов.</p>
         </div>
       </div>
     );
@@ -165,42 +155,41 @@ const DataTablePage = ({ project, onUpdate }) => {
   return (
     <div className="data-table-page">
       <div className="data-table__header-section">
-        <h2>Priority Assessment Results</h2>
+        <h2>Результаты оценки приоритетов</h2>
         <Button variant="primary" size="medium" onClick={exportToCSV}>
-          📊 Export to CSV
+          <Download size={16} />
+          Экспорт в CSV
         </Button>
       </div>
-      
+
       <div className="data-table__container">
         <div className="data-table">
           <div className="data-table__header">
-            <div className="header__cell">Column Name</div>
-            {sortedDataItems.map(item => (
+            <div className="header__cell">Название показателя</div>
+            {sortedDataItems.map((item) => (
               <div key={item.id} className="header__cell">
                 {item.name}
               </div>
             ))}
-            <div className="header__cell">Total Score</div>
-            <div className="header__cell">Final Rank</div>
+            <div className="header__cell">Общая оценка</div>
+            <div className="header__cell">Финальный ранг</div>
           </div>
 
           <div className="data-table__body">
-            {sortedColumns.map(column => {
-              // Calculate total score for this column across all data items
+            {sortedColumns.map((column) => {
               let totalScore = 0;
-              sortedDataItems.forEach(item => {
-                const orderItem = item.order.find(o => o.column_id === column.id);
+              sortedDataItems.forEach((item) => {
+                const orderItem = item.order.find((o) => o.column_id === column.id);
                 if (orderItem) {
                   totalScore += orderItem.position;
                 }
               });
-              
+
               return (
                 <div key={column.id} className="data-table__row">
                   <div className="row__cell row__cell--column-name">{column.name}</div>
-                  {sortedDataItems.map(item => {
-                    const orderItem = item.order.find(o => o.column_id === column.id);
-                    const result = results.get(item.id);
+                  {sortedDataItems.map((item) => {
+                    const orderItem = item.order.find((o) => o.column_id === column.id);
                     return (
                       <div key={item.id} className="row__cell">
                         <input

@@ -13,15 +13,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, Pencil, Trash2, Plus, Download, Link as LinkIcon } from 'lucide-react';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './ProjectPage.scss';
 
-// Компонент для сортируемого элемента данных
 const SortableDataItem = ({ item, index, onDelete }) => {
   const {
     attributes,
@@ -45,16 +43,13 @@ const SortableDataItem = ({ item, index, onDelete }) => {
       className={`project-page__data-item ${isDragging ? 'dragging' : ''}`}
     >
       <div className="data-item__drag-handle" {...attributes} {...listeners}>
-        ⋮⋮
+        <GripVertical size={18} />
       </div>
       <span className="data-item__name">{item.name}</span>
       <div className="data-item__actions">
-        <Button
-          variant="danger"
-          size="small"
-          onClick={() => onDelete(item.id)}
-        >
-          Delete
+        <Button variant="danger" size="small" onClick={() => onDelete(item.id)}>
+          <Trash2 size={14} />
+          Удалить
         </Button>
       </div>
     </div>
@@ -70,12 +65,9 @@ const ProjectPage = ({ project, onUpdate }) => {
   const [newLink, setNewLink] = useState('');
   const [dataItems, setDataItems] = useState([]);
 
-  // Настройка сенсоров для dnd-kit
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
+      activationConstraint: { distance: 5 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -85,7 +77,6 @@ const ProjectPage = ({ project, onUpdate }) => {
   useEffect(() => {
     if (project && project.data) {
       const sortedData = [...project.data].sort((a, b) => a.position - b.position);
-      // Добавляем уникальные ID для dnd-kit
       const itemsWithId = sortedData.map((item, idx) => ({
         ...item,
         id: `data-${item.id}-${idx}`,
@@ -118,7 +109,7 @@ const ProjectPage = ({ project, onUpdate }) => {
   const handleAddColumn = () => {
     const newColumn = {
       id: Date.now(),
-      name: 'New Column',
+      name: 'Новый показатель',
       final_position: (project.columns?.length || 0) + 1,
     };
     onUpdate({
@@ -130,7 +121,7 @@ const ProjectPage = ({ project, onUpdate }) => {
   const handleUpdateColumn = (id, name) => {
     onUpdate({
       ...project,
-      columns: (project.columns || []).map(col =>
+      columns: (project.columns || []).map((col) =>
         col.id === id ? { ...col, name } : col
       ),
     });
@@ -138,13 +129,13 @@ const ProjectPage = ({ project, onUpdate }) => {
   };
 
   const handleDeleteColumn = (id) => {
-    if (window.confirm('Delete this column?')) {
+    if (window.confirm('Удалить этот показатель?')) {
       onUpdate({
         ...project,
-        columns: (project.columns || []).filter(col => col.id !== id),
-        data: (project.data || []).map(dataItem => ({
+        columns: (project.columns || []).filter((col) => col.id !== id),
+        data: (project.data || []).map((dataItem) => ({
           ...dataItem,
-          order: (dataItem.order || []).filter(order => order.column_id !== id),
+          order: (dataItem.order || []).filter((order) => order.column_id !== id),
         })),
       });
     }
@@ -152,29 +143,29 @@ const ProjectPage = ({ project, onUpdate }) => {
 
   const handleAddData = () => {
     if (!newDataName.trim()) return;
-    
+
     const newData = {
       id: Date.now(),
       name: newDataName,
       position: (project.data?.length || 0) + 1,
-      order: (project.columns || []).map(column => ({
+      order: (project.columns || []).map((column) => ({
         column_id: column.id,
-        position: 1
+        position: 1,
       })),
     };
-    
+
     onUpdate({
       ...project,
       data: [...(project.data || []), newData],
     });
-    
+
     setNewDataName('');
     setShowDataModal(false);
   };
 
   const handleDeleteData = (id) => {
-    if (window.confirm('Delete this data item?')) {
-      const updatedData = (project.data || []).filter(item => item.id !== id);
+    if (window.confirm('Удалить этот элемент данных?')) {
+      const updatedData = (project.data || []).filter((item) => item.id !== id);
       const reorderedData = updatedData.map((item, idx) => ({
         ...item,
         position: idx + 1,
@@ -186,46 +177,45 @@ const ProjectPage = ({ project, onUpdate }) => {
     }
   };
 
-  const handleDataDragEnd = useCallback((event) => {
-    const { active, over } = event;
+  const handleDataDragEnd = useCallback(
+    (event) => {
+      const { active, over } = event;
 
-    if (active.id !== over.id) {
-      const oldIndex = dataItems.findIndex((item) => item.id === active.id);
-      const newIndex = dataItems.findIndex((item) => item.id === over.id);
+      if (active.id !== over.id) {
+        const oldIndex = dataItems.findIndex((item) => item.id === active.id);
+        const newIndex = dataItems.findIndex((item) => item.id === over.id);
 
-      const newItems = arrayMove(dataItems, oldIndex, newIndex);
-      
-      // Обновляем позиции
-      const updatedItems = newItems.map((item, idx) => ({
-        ...item,
-        position: idx + 1,
-      }));
+        const newItems = arrayMove(dataItems, oldIndex, newIndex);
+        const updatedItems = newItems.map((item, idx) => ({
+          ...item,
+          position: idx + 1,
+        }));
 
-      setDataItems(updatedItems);
-      
-      // Обновляем данные в проекте, сохраняя оригинальные ID
-      const updatedData = updatedItems.map(({ originalId, name, position, order }) => ({
-        id: originalId,
-        name,
-        position,
-        order,
-      }));
-      
-      onUpdate({
-        ...project,
-        data: updatedData,
-      });
-    }
-  }, [dataItems, project, onUpdate]);
+        setDataItems(updatedItems);
+
+        const updatedData = updatedItems.map(({ originalId, name, position, order }) => ({
+          id: originalId,
+          name,
+          position,
+          order,
+        }));
+
+        onUpdate({
+          ...project,
+          data: updatedData,
+        });
+      }
+    },
+    [dataItems, project, onUpdate]
+  );
 
   const exportRespondentFile = () => {
-    // Create a complete respondent survey file with all project configuration
     const respondentSurvey = {
       role: 'respondent',
       project: project.project,
       links: project.links || [],
-      bg_color: project.bg_color || '#f5f7fa',
-      text_color: project.text_color || '#2c3e50',
+      bg_color: project.bg_color || '#f8fafc',
+      text_color: project.text_color || '#1e293b',
       card_color: project.card_color || '#ffffff',
       image_url: project.image_url || '',
       columns: project.columns || [],
@@ -233,9 +223,9 @@ const ProjectPage = ({ project, onUpdate }) => {
         id: null,
         name: '',
         position: 1,
-        order: (project.columns || []).map(column => ({
+        order: (project.columns || []).map((column) => ({
           column_id: column.id,
-          position: 1
+          position: 1,
         })),
       },
     };
@@ -250,170 +240,176 @@ const ProjectPage = ({ project, onUpdate }) => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    alert('Respondent survey file downloaded! Share this file with respondents.');
   };
 
-  // Получаем ID элементов для SortableContext
-  const itemIds = useMemo(() => dataItems.map(item => item.id), [dataItems]);
+  const itemIds = useMemo(() => dataItems.map((item) => item.id), [dataItems]);
 
   return (
     <div className="project-page">
-        <div className="project-page__section">
-          <h2>Project Settings</h2>
-          <div className="project-page__field">
-            <label>Project Name</label>
-            <input
-              type="text"
-              value={project.project || ''}
-              onChange={(e) => handleProjectUpdate('project', e.target.value)}
-            />
-          </div>
+      <div className="project-page__section">
+        <h2>Настройки проекта</h2>
 
-          <div className="project-page__field">
-            <label>Links</label>
-            <div className="links-list">
-              {(project.links || []).map((link, index) => (
-                <div key={index} className="link-item">
-                  <a href={link} target="_blank" rel="noopener noreferrer">{link}</a>
-                  <Button variant="danger" size="small" onClick={() => handleRemoveLink(index)}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
-          <Button variant="secondary" size="small" onClick={() => setShowLinkModal(true)}>
-            Add Link
-          </Button>
-          </div>
-
-          <div className="project-page__field">
-            <label>Background Color</label>
-            <input
-              type="color"
-              value={project.bg_color || '#f5f7fa'}
-              onChange={(e) => handleProjectUpdate('bg_color', e.target.value)}
-            />
-          </div>
-
-          <div className="project-page__field">
-            <label>Text Color</label>
-            <input
-              type="color"
-              value={project.text_color || '#2c3e50'}
-              onChange={(e) => handleProjectUpdate('text_color', e.target.value)}
-            />
-          </div>
-
-          <div className="project-page__field">
-            <label>Card Color</label>
-            <input
-              type="color"
-              value={project.card_color || '#ffffff'}
-              onChange={(e) => handleProjectUpdate('card_color', e.target.value)}
-            />
-          </div>
-
-          <div className="project-page__field">
-            <label>Banner Image URL</label>
-            <input
-              type="url"
-              value={project.image_url || ''}
-              onChange={(e) => handleProjectUpdate('image_url', e.target.value)}
-              placeholder="https://example.com/banner.jpg"
-            />
-            {project.image_url && (
-              <div className="banner-preview">
-                <img src={project.image_url} alt="Banner preview" />
-              </div>
-            )}
-          </div>
+        <div className="project-page__field">
+          <label>Название проекта</label>
+          <input
+            type="text"
+            value={project.project || ''}
+            onChange={(e) => handleProjectUpdate('project', e.target.value)}
+            placeholder="Введите название проекта"
+          />
         </div>
 
-        <div className="project-page__section">
-        <div className="project-page__header">
-          <h2>Columns</h2>
-          <Button variant="primary" size="small" onClick={handleAddColumn}>
-            Add Column
-          </Button>
-        </div>
-          <div className="project-page__columns">
-            {(project.columns || []).map((column) => (
-              <div key={column.id} className="project-page__column-item">
-                <span className="column-name">{column.name}</span>
-                <div className="column-actions">
-                  <Button
-                    variant="secondary"
-                    size="small"
-                    onClick={() => {
-                      setEditingColumn(column);
-                      setShowColumnModal(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="small"
-                    onClick={() => handleDeleteColumn(column.id)}
-                  >
-                    Delete
-                  </Button>
-                </div>
+        <div className="project-page__field">
+          <label>Ссылки</label>
+          <div className="links-list">
+            {(project.links || []).map((link, index) => (
+              <div key={index} className="link-item">
+                <a href={link} target="_blank" rel="noopener noreferrer">
+                  <LinkIcon size={14} />
+                  {link}
+                </a>
+                <Button variant="danger" size="small" onClick={() => handleRemoveLink(index)}>
+                  <Trash2 size={14} />
+                  Удалить
+                </Button>
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="project-page__section">
-        <div className="project-page__header">
-          <h2>Data Items (Drag to reorder)</h2>
-          <Button variant="primary" size="small" onClick={() => setShowDataModal(true)}>
-            Add Data Item
+          <Button variant="secondary" size="small" onClick={() => setShowLinkModal(true)}>
+            <Plus size={14} />
+            Добавить еще
           </Button>
         </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDataDragEnd}
-          >
-            <SortableContext
-              items={itemIds}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="project-page__data-items">
-                {dataItems.map((item, index) => (
-                  <SortableDataItem
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    onDelete={handleDeleteData}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+
+        <div className="project-page__field">
+          <label>Цвет фона</label>
+          <input
+            type="color"
+            value={project.bg_color || '#f8fafc'}
+            onChange={(e) => handleProjectUpdate('bg_color', e.target.value)}
+          />
         </div>
+
+        <div className="project-page__field">
+          <label>Цвет текста</label>
+          <input
+            type="color"
+            value={project.text_color || '#1e293b'}
+            onChange={(e) => handleProjectUpdate('text_color', e.target.value)}
+          />
+        </div>
+
+        <div className="project-page__field">
+          <label>Цвет карточек</label>
+          <input
+            type="color"
+            value={project.card_color || '#ffffff'}
+            onChange={(e) => handleProjectUpdate('card_color', e.target.value)}
+          />
+        </div>
+
+        <div className="project-page__field">
+          <label>URL баннера</label>
+          <input
+            type="url"
+            value={project.image_url || ''}
+            onChange={(e) => handleProjectUpdate('image_url', e.target.value)}
+            placeholder="https://example.com/banner.jpg"
+          />
+          {project.image_url && (
+            <div className="banner-preview">
+              <img src={project.image_url} alt="Превью баннера" />
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="project-page__section">
         <div className="project-page__header">
-          <h2>Respondent Survey</h2>
+          <h2>Показатели</h2>
+          <Button variant="primary" size="small" onClick={handleAddColumn}>
+            <Plus size={14} />
+            Добавить показатель
+          </Button>
+        </div>
+        <div className="project-page__columns">
+          {(project.columns || []).map((column) => (
+            <div key={column.id} className="project-page__column-item">
+              <span className="column-name">{column.name}</span>
+              <div className="column-actions">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    setEditingColumn(column);
+                    setShowColumnModal(true);
+                  }}
+                >
+                  <Pencil size={14} />
+                  Редактировать
+                </Button>
+                <Button
+                  variant="danger"
+                  size="small"
+                  onClick={() => handleDeleteColumn(column.id)}
+                >
+                  <Trash2 size={14} />
+                  Удалить
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="project-page__section">
+        <div className="project-page__header">
+          <h2>Респонденты:</h2>
+          <Button variant="primary" size="small" onClick={() => setShowDataModal(true)}>
+            <Plus size={14} />
+            Добавить респодента вручную
+          </Button>
+        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDataDragEnd}
+        >
+          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+            <div className="project-page__data-items">
+              {dataItems.map((item, index) => (
+                <SortableDataItem
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  onDelete={handleDeleteData}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
+
+      <div className="project-page__section">
+        <div className="project-page__header">
+          <h2>Опрос для респондентов</h2>
           <Button variant="success" size="medium" onClick={exportRespondentFile}>
-            📥 Download Respondent Survey
+            <Download size={16} />
+            Скачать файл опроса
           </Button>
         </div>
         <p className="respondent-hint">
-          Download this file and share it with respondents. They can open it to complete the priority survey.
-          The file contains all project configuration (columns, colors, links) for the respondent.
+          Скачайте этот файл и поделитесь им с респондентами. Они смогут открыть его для прохождения опроса.
         </p>
       </div>
 
-      <Modal isOpen={showColumnModal} onClose={() => setShowColumnModal(false)} title="Edit Column">
+      <Modal isOpen={showColumnModal} onClose={() => setShowColumnModal(false)} title="Редактировать показатель">
         {editingColumn && (
           <>
             <input
               type="text"
               defaultValue={editingColumn.name}
-              placeholder="Column name"
+              placeholder="Название показателя"
               className="modal__input"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
@@ -429,19 +425,19 @@ const ProjectPage = ({ project, onUpdate }) => {
                   handleUpdateColumn(editingColumn.id, input.value);
                 }}
               >
-                Save
+                Сохранить
               </Button>
             </div>
           </>
         )}
       </Modal>
 
-      <Modal isOpen={showDataModal} onClose={() => setShowDataModal(false)} title="Add Data Item">
+      <Modal isOpen={showDataModal} onClose={() => setShowDataModal(false)} title="Добавить респондента">
         <input
           type="text"
           value={newDataName}
           onChange={(e) => setNewDataName(e.target.value)}
-          placeholder="Data item name"
+          placeholder="ФИО респондента"
           className="modal__input"
           onKeyPress={(e) => {
             if (e.key === 'Enter') {
@@ -452,12 +448,12 @@ const ProjectPage = ({ project, onUpdate }) => {
         />
         <div className="modal__actions">
           <Button variant="primary" onClick={handleAddData}>
-            Add
+            Добавить
           </Button>
         </div>
       </Modal>
 
-      <Modal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Add Link">
+      <Modal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} title="Добавить ссылку">
         <input
           type="url"
           value={newLink}
@@ -473,7 +469,7 @@ const ProjectPage = ({ project, onUpdate }) => {
         />
         <div className="modal__actions">
           <Button variant="primary" onClick={handleAddLink}>
-            Add
+            Добавить
           </Button>
         </div>
       </Modal>

@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
+import { Upload } from 'lucide-react';
 import './FileUpload.scss';
+import toast from 'react-hot-toast';
 
 const FileUpload = ({ children, onFileLoad, accept = '.json' }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -33,16 +35,16 @@ const FileUpload = ({ children, onFileLoad, accept = '.json' }) => {
 
   const handleFile = (file) => {
     if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
-      alert('Please upload a JSON file');
+      toast.error('Пожалуйста, загрузите JSON файл');
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       onFileLoad(e.target.result);
     };
     reader.onerror = () => {
-      alert('Error reading file');
+      toast.error('Ошибка чтения файла');
     };
     reader.readAsText(file);
   };
@@ -66,7 +68,12 @@ const FileUpload = ({ children, onFileLoad, accept = '.json' }) => {
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
-      {children}
+      {children || (
+        <div className="file-upload__default">
+          <Upload size={32} />
+          <span>Нажмите или перетащите файл для загрузки</span>
+        </div>
+      )}
     </div>
   );
 };

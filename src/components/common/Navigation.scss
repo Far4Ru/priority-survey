@@ -1,68 +1,83 @@
 .navigation {
   background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 100;
-  
+
   &__container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 1rem 2rem;
+    padding: 12px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 16px;
   }
-  
+
   &__project-name {
     font-weight: 600;
-    color: #2c3e50;
-    font-size: 1.1rem;
+    font-size: 16px;
+    color: #1e293b;
   }
-  
+
   &__links {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
     flex-wrap: wrap;
   }
-  
+
   &__link {
-    padding: 0.5rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
     background: none;
     border: none;
     cursor: pointer;
-    border-radius: 0.5rem;
+    border-radius: 8px;
     transition: all 0.2s;
-    font-size: 0.95rem;
-    color: #7f8c8d;
-    
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+
     &:hover {
-      background: #ecf0f1;
-      color: #2c3e50;
+      background: #f1f5f9;
+      color: #1e293b;
     }
-    
+
     &.active {
-      background: #3498db;
+      background: #3b82f6;
       color: white;
     }
-    
+
     &--home {
-      background: #95a5a6;
+      background: #64748b;
       color: white;
-      
+
       &:hover {
-        background: #7f8c8d;
+        background: #475569;
       }
     }
   }
 }
 
 @media (max-width: 768px) {
-  .navigation__container {
-    padding: 1rem;
-    flex-direction: column;
-    text-align: center;
+  .navigation {
+    &__container {
+      padding: 12px 16px;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    &__link {
+      padding: 6px 12px;
+      font-size: 13px;
+
+      span {
+        display: inline;
+      }
+    }
   }
 }

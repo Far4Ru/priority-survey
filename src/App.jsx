@@ -5,6 +5,7 @@ import ProjectPage from './pages/ProjectPage';
 import PriorityOrderPage from './pages/PriorityOrderPage';
 import DataTablePage from './pages/DataTablePage';
 import RespondentPage from './pages/RespondentPage';
+import { Toaster } from 'react-hot-toast';
 import './styles/App.scss';
 
 const App = () => {
@@ -56,13 +57,39 @@ const App = () => {
         return <DataTablePage project={project} onUpdate={saveProject} />;
       default:
         return (
-          <HomePage
-            project={project}
-            onLoad={saveProject}
-            onClear={clearProject}
-            onNavigate={setCurrentPage}
-            setUserRole={setUserRole}
-          />
+          <>
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#4ade80',
+                    secondary: '#fff',
+                  },
+                },
+                error: {
+                  duration: 4000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
+            <HomePage
+              project={project}
+              onLoad={saveProject}
+              onClear={clearProject}
+              onNavigate={setCurrentPage}
+              setUserRole={setUserRole}
+            />
+          </>
         );
     }
   };
@@ -80,7 +107,31 @@ const App = () => {
           projectName={project.project}
         />
       )}
-      <main className="app__main">{renderPage()}</main>
+      <main className="app__main">
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#4ade80',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />{renderPage()}</main>
     </div>
   );
 };

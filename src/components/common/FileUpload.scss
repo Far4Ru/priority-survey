@@ -2,13 +2,31 @@
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
-  
+
   &--dragging {
     transform: scale(1.02);
-    
-    .button {
-      background: #2980b9;
-      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+
+    >* {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+  }
+
+  &__default {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    color: #64748b;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: #3b82f6;
+      background: #f1f5f9;
     }
   }
 }

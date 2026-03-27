@@ -1,4 +1,15 @@
+.data-table {
+  &__header-section {
+    display: flex;
+    justify-content: space-between;
+    margin: 24px 8px;
+  }
+}
+
 .data-table-page {
+  margin: 0 auto;
+  padding: 24px;
+
   &__header-section {
     display: flex;
     justify-content: space-between;
@@ -6,7 +17,7 @@
     margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
-    
+
     h2 {
       color: #2c3e50;
       margin: 0;
@@ -23,12 +34,12 @@
 
 .data-table {
   min-width: 600px;
-  
+
   &__header {
     display: flex;
     background: #f8f9fa;
     border-bottom: 2px solid #e0e4e8;
-    
+
     .header__cell {
       flex: 1;
       padding: 1rem;
@@ -36,24 +47,24 @@
       color: #2c3e50;
       text-align: center;
       min-width: 100px;
-      
+
       &:first-child {
         min-width: 150px;
         text-align: left;
       }
     }
   }
-  
+
   &__body {
     .data-table__row {
       display: flex;
       border-bottom: 1px solid #e0e4e8;
       transition: background 0.2s;
-      
+
       &:hover {
         background: #f8f9fa;
       }
-      
+
       .row__cell {
         flex: 1;
         padding: 0.75rem;
@@ -61,33 +72,33 @@
         align-items: center;
         justify-content: center;
         min-width: 100px;
-        
+
         &:first-child {
           min-width: 150px;
           justify-content: flex-start;
           font-weight: 500;
           color: #2c3e50;
         }
-        
+
         .priority-input {
           width: 70px;
           padding: 0.5rem;
           border: 1px solid #e0e4e8;
           border-radius: 0.5rem;
           text-align: center;
-          
+
           &:focus {
             outline: none;
             border-color: #3498db;
           }
         }
       }
-      
+
       .row__cell--score {
         font-weight: 600;
         color: #3498db;
       }
-      
+
       .row__cell--rank {
         font-weight: 600;
         color: #27ae60;
@@ -95,18 +106,18 @@
       }
     }
   }
-  
+
   &__empty {
     text-align: center;
     padding: 3rem;
     background: white;
     border-radius: 1rem;
-    
+
     h2 {
       color: #7f8c8d;
       margin-bottom: 1rem;
     }
-    
+
     p {
       color: #95a5a6;
     }
@@ -120,17 +131,17 @@
       text-align: center;
     }
   }
-  
+
   .data-table__header .header__cell,
   .data-table__body .row__cell {
     font-size: 0.85rem;
     padding: 0.5rem;
     min-width: 80px;
-    
+
     &:first-child {
       min-width: 120px;
     }
-    
+
     .priority-input {
       width: 50px;
       padding: 0.25rem;
