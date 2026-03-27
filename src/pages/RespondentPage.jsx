@@ -931,16 +931,12 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
               Респондент: <strong>{respondentName}</strong>
             </p>
             <div className="completion-modal__actions">
-              <Button variant="primary" onClick={handleShare}>
-                <Share2 size={16} />
-                Поделиться
-              </Button>
               <Button variant="secondary" onClick={handleExport}>
                 <Save size={16} />
-                Сохранить
+                1. Сохранить (отправьте, пожалуйста json файл)
               </Button>
               <Button variant="success" onClick={handleFinish}>
-                Завершить
+                2. Завершить
               </Button>
             </div>
           </div>
