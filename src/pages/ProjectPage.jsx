@@ -223,9 +223,9 @@ const ProjectPage = ({ project, onUpdate }) => {
         id: null,
         name: '',
         position: 1,
-        order: (project.columns || []).map((column) => ({
+        order: (project.columns || []).map((column, index) => ({
           column_id: column.id,
-          position: 1,
+          position: index + 1,
         })),
       },
     };
