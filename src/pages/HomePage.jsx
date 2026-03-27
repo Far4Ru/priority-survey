@@ -27,7 +27,7 @@ const HomePage = ({ project, onLoad, onClear, onNavigate, setUserRole }) => {
 
           onLoad(parsed);
           setUserRole('respondent');
-          toast.success('Файл опроса респондента загружен успешно!');
+          // toast.success('Файл опроса респондента загружен успешно!');
         } else {
           toast.error('Неверный формат файла респондента. Отсутствуют обязательные поля (project, columns или data).');
         }

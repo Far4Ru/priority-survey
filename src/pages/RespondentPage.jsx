@@ -8,7 +8,6 @@ import {
   useSensors,
   defaultDropAnimation,
   DragOverlay,
-  TouchSensor,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -23,6 +22,116 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './RespondentPage.scss';
 import toast, { Toaster } from 'react-hot-toast';
+
+// Кастомный сенсор для мобильных устройств с поддержкой прокрутки
+class CustomTouchSensor {
+  constructor(activator, onActivate, onMove, onEnd, options = {}) {
+    this.activator = activator;
+    this.onActivate = onActivate;
+    this.onMove = onMove;
+    this.onEnd = onEnd;
+    this.options = options;
+    this.active = false;
+    this.initialCoordinates = null;
+    this.dragStarted = false;
+    this.scrollStarted = false;
+  }
+
+  attach() {
+    document.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    document.addEventListener('touchend', this.handleTouchEnd);
+    document.addEventListener('touchcancel', this.handleTouchCancel);
+  }
+
+  detach() {
+    document.removeEventListener('touchstart', this.handleTouchStart);
+    document.removeEventListener('touchmove', this.handleTouchMove);
+    document.removeEventListener('touchend', this.handleTouchEnd);
+    document.removeEventListener('touchcancel', this.handleTouchCancel);
+  }
+
+  handleTouchStart = (event) => {
+    if (this.active) return;
+
+    const touch = event.touches[0];
+    const target = event.target;
+
+    // Проверяем, что касание было на drag-ручке
+    const isDragHandle = target.closest('.item__drag-handle');
+    if (!isDragHandle) return;
+
+    event.preventDefault();
+
+    this.initialCoordinates = {
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+
+    this.active = true;
+    this.dragStarted = false;
+    this.scrollStarted = false;
+
+    const element = isDragHandle.closest('.priority-order__item');
+    if (element && element.getAttribute('data-id')) {
+      const id = element.getAttribute('data-id');
+      this.onActivate({ active: { id } });
+    }
+  };
+
+  handleTouchMove = (event) => {
+    if (!this.active) return;
+
+    const touch = event.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+
+    const deltaX = Math.abs(currentX - this.initialCoordinates.x);
+    const deltaY = Math.abs(currentY - this.initialCoordinates.y);
+
+    // Если движение больше 10px, считаем что начался drag
+    if (!this.dragStarted && (deltaX > 10 || deltaY > 10)) {
+      this.dragStarted = true;
+      event.preventDefault();
+      document.body.style.overflow = 'hidden';
+      document.body.style.userSelect = 'none';
+    }
+
+    if (this.dragStarted) {
+      event.preventDefault();
+      this.onMove({
+        delta: {
+          x: currentX - this.initialCoordinates.x,
+          y: currentY - this.initialCoordinates.y,
+        },
+        initialCoordinates: this.initialCoordinates,
+      });
+    }
+  };
+
+  handleTouchEnd = (event) => {
+    if (this.active) {
+      this.onEnd();
+      this.reset();
+    }
+  };
+
+  handleTouchCancel = (event) => {
+    if (this.active) {
+      this.onEnd();
+      this.reset();
+    }
+  };
+
+  reset() {
+    this.active = false;
+    this.dragStarted = false;
+    this.scrollStarted = false;
+    this.initialCoordinates = null;
+    document.body.style.overflow = '';
+    document.body.style.userSelect = '';
+  }
+}
 
 const SortablePriorityItem = ({
   item,
@@ -117,7 +226,6 @@ const SortablePriorityItem = ({
     e.stopPropagation();
   };
 
-  // Предотвращаем запуск drag при касании инпута
   const handleTouchStart = (e) => {
     if (e.target.closest('.item__position input, .position-display')) {
       e.stopPropagation();
@@ -135,6 +243,7 @@ const SortablePriorityItem = ({
       }}
       className={`priority-order__item ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
       onTouchStart={handleTouchStart}
+      data-id={item.id}
     >
       <div
         ref={dragHandleRef}
@@ -234,20 +343,16 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [columns, setColumns] = useState([]);
   const [activeId, setActiveId] = useState(null);
+  const dragStartRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
 
-  // Настройка сенсоров для мобильных устройств
+  // Используем стандартные сенсоры, но с оптимизированными настройками
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Увеличиваем расстояние для активации на мобильных
-        delay: 200,  // Добавляем задержку для отличия от прокрутки
+        distance: 10,
+        delay: 100,
         tolerance: 5,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,      // Задержка перед активацией drag
-        tolerance: 8,    // Толерантность для предотвращения случайного drag
       },
     }),
     useSensor(KeyboardSensor, {
@@ -255,10 +360,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     })
   );
 
-  // Настройка анимации падения для мобильных
+  // Настройка анимации
   const dropAnimation = {
     ...defaultDropAnimation,
-    duration: 250,
+    duration: 200,
     easing: 'cubic-bezier(0.2, 0, 0, 1)',
   };
 
@@ -376,9 +481,16 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
   const handleDragStart = useCallback((event) => {
     setActiveId(event.active.id);
-    // Предотвращаем прокрутку страницы во время drag
+
+    // Сохраняем позицию прокрутки
+    const scrollY = window.scrollY;
+    dragStartRef.current = scrollY;
+
+    // Блокируем прокрутку на время drag
     document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
     document.body.classList.add('dragging');
   }, []);
 
@@ -387,10 +499,19 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
       const { active, over } = event;
 
       setActiveId(null);
-      // Восстанавливаем прокрутку страницы
+
+      // Восстанавливаем прокрутку
+      const scrollY = dragStartRef.current;
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
       document.body.classList.remove('dragging');
+
+      if (scrollY !== null) {
+        window.scrollTo(0, scrollY);
+        dragStartRef.current = null;
+      }
 
       if (active.id !== over?.id) {
         const oldIndex = order.findIndex((item) => item.id === active.id);
@@ -426,9 +547,19 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
+
+    // Восстанавливаем прокрутку при отмене
+    const scrollY = dragStartRef.current;
     document.body.style.overflow = '';
-    document.body.style.touchAction = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
     document.body.classList.remove('dragging');
+
+    if (scrollY !== null) {
+      window.scrollTo(0, scrollY);
+      dragStartRef.current = null;
+    }
   }, []);
 
   const handleComplete = () => {

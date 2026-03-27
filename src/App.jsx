@@ -61,20 +61,20 @@ const App = () => {
             <Toaster
               position="bottom-right"
               toastOptions={{
-                duration: 3000,
+                duration: 1000,
                 style: {
                   background: '#363636',
                   color: '#fff',
                 },
                 success: {
-                  duration: 3000,
+                  duration: 1000,
                   iconTheme: {
                     primary: '#4ade80',
                     secondary: '#fff',
                   },
                 },
                 error: {
-                  duration: 4000,
+                  duration: 1000,
                   iconTheme: {
                     primary: '#ef4444',
                     secondary: '#fff',
