@@ -17,47 +17,6 @@ const DataTablePage = ({ project, onUpdate }) => {
     }
   }, [project]);
 
-  const calculateResults = () => {
-    if (!dataItems.length || !project.columns.length) return new Map();
-
-    const results = new Map();
-    const sortedData = [...dataItems].sort((a, b) => a.position - b.position);
-
-    sortedData.forEach((item) => {
-      let totalScore = 0;
-      const columnScores = new Map();
-
-      project.columns.forEach((column) => {
-        const orderItem = item.order.find((o) => o.column_id === column.id);
-        if (orderItem) {
-          const weight = column.final_position || column.position || 1;
-          const score = orderItem.position * weight;
-          columnScores.set(column.id, score);
-          totalScore += score;
-        }
-      });
-
-      results.set(item.id, {
-        id: item.id,
-        name: item.name,
-        totalScore,
-        columnScores,
-      });
-    });
-
-    // Sort by totalScore for ranking (lower score = higher priority)
-    const sortedResults = Array.from(results.values()).sort((a, b) => a.totalScore - b.totalScore);
-    const rankedResults = new Map();
-    sortedResults.forEach((result, idx) => {
-      rankedResults.set(result.id, {
-        ...result,
-        finalRank: idx + 1,
-      });
-    });
-
-    return rankedResults;
-  };
-
   const handleOrderChange = (dataId, columnId, value) => {
     const position = parseInt(value);
     if (isNaN(position) || position < 1) return;
@@ -87,14 +46,47 @@ const DataTablePage = ({ project, onUpdate }) => {
     });
   };
 
-  const results = calculateResults();
   const sortedDataItems = [...dataItems].sort((a, b) => a.position - b.position);
   const sortedColumns = [...(project?.columns || [])].sort(
     (a, b) => (a.final_position || a.position || 0) - (b.final_position || b.position || 0)
   );
 
+  const calculateItemRankings = () => {
+    console.log(sortedDataItems)
+    console.log(sortedColumns)
+    const itemScores = sortedColumns.map((item) => {
+      let totalScore = 0;
+      sortedDataItems.forEach((data) => {
+        const orderItem = data.order.find((o) => o.column_id === item.id);
+        if (orderItem) {
+          totalScore += orderItem.position;
+        }
+      });
+      return {
+        id: item.id,
+        name: item.name,
+        totalScore,
+      };
+    });
+    console.log(itemScores)
+
+    // Сортируем по общей оценке (меньшая оценка = выше приоритет)
+    const sortedByScore = [...itemScores].sort((a, b) => a.totalScore - b.totalScore);
+
+    // Создаем мапу с рангами
+    const rankings = new Map();
+    sortedByScore.forEach((item, index) => {
+      rankings.set(item.id, index + 1);
+    });
+    console.log(rankings)
+
+    return rankings;
+  };
+
+  const itemRankings = calculateItemRankings();
+
   const exportToCSV = () => {
-    const headers = ['Название показателя', ...sortedDataItems.map((item) => item.name), 'Сумма балов', 'Итоговое место'];
+    const headers = ['Название показателя', ...sortedDataItems.map((item) => item.name), 'Сумма балов', 'Финальный ранг'];
 
     const rows = sortedColumns.map((column) => {
       const row = [column.name];
@@ -203,7 +195,9 @@ const DataTablePage = ({ project, onUpdate }) => {
                     );
                   })}
                   <div className="row__cell row__cell--score">{totalScore}</div>
-                  <div className="row__cell row__cell--rank">-</div>
+                  <div className="row__cell row__cell--rank">
+                    {itemRankings.get(column.id)}
+                  </div>
                 </div>
               );
             })}
