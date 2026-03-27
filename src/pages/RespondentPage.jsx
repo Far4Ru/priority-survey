@@ -241,8 +241,6 @@ const SortablePriorityItem = ({
         color: textColor,
         backgroundColor: cardColor,
       }}
-      {...attributes}
-      {...listeners}
       className={`priority-order__item ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
       onTouchStart={handleTouchStart}
       data-id={item.id}
@@ -250,6 +248,8 @@ const SortablePriorityItem = ({
       <div
         ref={dragHandleRef}
         className="item__drag-handle"
+        {...attributes}
+        {...listeners}
       >
         <GripVertical size={20}
           style={{
