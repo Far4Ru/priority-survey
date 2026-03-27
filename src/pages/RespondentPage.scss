@@ -119,7 +119,13 @@
 
     &.dragging {
       opacity: 0.5;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: grabbing;
+    }
+
+    &.dragging-overlay {
+      cursor: grabbing;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      z-index: 9999;
     }
 
     .item__drag-handle {
@@ -276,4 +282,8 @@
       margin-left: auto;
     }
   }
+}
+
+body.dragging {
+  overflow: hidden;
 }

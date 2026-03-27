@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -6,6 +6,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  defaultDropAnimation,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -19,7 +21,7 @@ import { GripVertical, ChevronUp, ChevronDown, Share2, Save, CheckCircle, Extern
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './RespondentPage.scss';
-import toast, { Toaster } from 'react-hot-toast'; // Добавлен импорт Toaster
+import toast, { Toaster } from 'react-hot-toast';
 
 const SortablePriorityItem = ({
   item,
@@ -39,12 +41,81 @@ const SortablePriorityItem = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({
+    id: item.id,
+    disabled: false, // Отключаем drag&drop во время редактирования
+  });
 
-  // Исправлено: объединяем transform и transition в один объект
+  const [localPosition, setLocalPosition] = useState(item.position);
+  const [isEditing, setIsEditing] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setLocalPosition(item.position);
+  }, [item.position]);
+
+  // Фокус на инпут при активации редактирования
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  };
+
+  const handlePositionBlur = () => {
+    // Небольшая задержка, чтобы не конфликтовать с другими событиями
+    setTimeout(() => {
+      setIsEditing(false);
+      if (localPosition !== item.position && localPosition !== '') {
+        onPositionChange(index, localPosition);
+      } else {
+        setLocalPosition(item.position);
+      }
+    }, 100);
+  };
+
+  const handlePositionKeyDown = (e) => {
+    e.stopPropagation(); // Останавливаем всплытие события
+
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Предотвращаем стандартное поведение
+      setIsEditing(false);
+      if (localPosition !== item.position && localPosition !== '') {
+        onPositionChange(index, localPosition);
+      } else {
+        setLocalPosition(item.position);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsEditing(false);
+      setLocalPosition(item.position);
+    }
+  };
+
+  const handlePositionChangeLocal = (e) => {
+    const value = e.target.value;
+    // Разрешаем ввод только чисел
+    if (value === '' || /^\d+$/.test(value)) {
+      setLocalPosition(value);
+    }
+  };
+
+  const handleClickDisplay = (e) => {
+    e.stopPropagation(); // Останавливаем всплытие, чтобы не активировать drag
+    setIsEditing(true);
+  };
+
+  const handleInputClick = (e) => {
+    e.stopPropagation(); // Останавливаем всплытие
+  };
+
+  const handleInputMouseDown = (e) => {
+    e.stopPropagation(); // Предотвращаем активацию drag при клике на инпут
   };
 
   return (
@@ -56,7 +127,7 @@ const SortablePriorityItem = ({
         color: textColor,
         backgroundColor: cardColor,
       }}
-      className={`priority-order__item ${isDragging ? 'dragging' : ''}`}
+      className={`priority-order__item ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
       {...attributes}
       {...listeners}
     >
@@ -67,19 +138,38 @@ const SortablePriorityItem = ({
           }} />
       </div>
       <div className="item__position">
-        <input
-          type="number"
-          value={item.position}
-          onChange={(e) => onPositionChange(index, e.target.value)}
-          min="1"
-          max={totalItems}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            borderColor: textColor + '40',
-            color: textColor,
-            backgroundColor: cardColor,
-          }}
-        />
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={localPosition}
+            onChange={handlePositionChangeLocal}
+            onKeyDown={handlePositionKeyDown}
+            onBlur={handlePositionBlur}
+            onClick={handleInputClick}
+            onMouseDown={handleInputMouseDown}
+            min="1"
+            max={totalItems}
+            style={{
+              borderColor: textColor + '40',
+              color: textColor,
+              backgroundColor: cardColor,
+            }}
+          />
+        ) : (
+          <div
+            className="position-display"
+            onClick={handleClickDisplay}
+            onMouseDown={(e) => e.stopPropagation()} // Предотвращаем активацию drag
+            style={{
+              borderColor: textColor + '40',
+              color: textColor,
+              backgroundColor: cardColor,
+            }}
+          >
+            {item.position}
+          </div>
+        )}
       </div>
       <div className="item__name" style={{ color: textColor }}>
         {column?.name || 'Неизвестно'}
@@ -87,7 +177,10 @@ const SortablePriorityItem = ({
       <div className="item__actions">
         <button
           className="move-button"
-          onClick={() => onMove(index, 'up')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(index, 'up');
+          }}
           disabled={index === 0}
           style={{
             borderColor: textColor + '40',
@@ -98,7 +191,10 @@ const SortablePriorityItem = ({
         </button>
         <button
           className="move-button"
-          onClick={() => onMove(index, 'down')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(index, 'down');
+          }}
           disabled={index === totalItems - 1}
           style={{
             borderColor: textColor + '40',
@@ -117,15 +213,27 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
   const [order, setOrder] = useState([]);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [columns, setColumns] = useState([]);
+  const [activeId, setActiveId] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: {
+        distance: 5,
+        delay: 100,
+        tolerance: 5,
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Настройка анимации падения
+  const dropAnimation = {
+    ...defaultDropAnimation,
+    duration: 200,
+    easing: 'cubic-bezier(0.2, 0, 0, 1)',
+  };
 
   useEffect(() => {
     if (project && project.columns) {
@@ -138,14 +246,14 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         const sortedOrder = [...project.data.order].sort((a, b) => a.position - b.position);
         const orderWithId = sortedOrder.map((item, idx) => ({
           ...item,
-          id: `priority-${item.column_id}-${idx}-${Date.now()}`, // Уникальный id
+          id: `priority-${item.column_id}-${Date.now()}-${idx}`,
         }));
         setOrder(orderWithId);
       } else if (sortedColumns.length > 0) {
         const initialOrder = sortedColumns.map((col, idx) => ({
           column_id: col.id,
           position: idx + 1,
-          id: `priority-${col.id}-${idx}-${Date.now()}`, // Уникальный id
+          id: `priority-${col.id}-${Date.now()}-${idx}`,
         }));
         setOrder(initialOrder);
 
@@ -198,13 +306,26 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
   const handlePositionChange = useCallback(
     (index, value) => {
-      const position = parseInt(value);
-      if (isNaN(position) || position < 1 || position > order.length) return;
+      // Проверяем, что введено число
+      if (!value || value.trim() === '') return;
 
+      const newPosition = parseInt(value);
+
+      // Проверяем валидность позиции
+      if (isNaN(newPosition)) return;
+
+      // Ограничиваем позицию в допустимых пределах
+      const clampedPosition = Math.min(Math.max(newPosition, 1), order.length);
+
+      // Если позиция не изменилась, ничего не делаем
+      if (clampedPosition === index + 1) return;
+
+      // Создаем новый массив с перемещенным элементом
       const newOrder = Array.from(order);
       const [movedItem] = newOrder.splice(index, 1);
-      newOrder.splice(position - 1, 0, movedItem);
+      newOrder.splice(clampedPosition - 1, 0, movedItem);
 
+      // Обновляем позиции для всех элементов
       const updatedOrder = newOrder.map((item, idx) => ({
         ...item,
         position: idx + 1,
@@ -212,6 +333,7 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
 
       setOrder(updatedOrder);
 
+      // Сохраняем изменения в проекте
       if (project.data) {
         const updatedData = {
           ...project.data,
@@ -225,13 +347,26 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
           data: updatedData,
         });
       }
+
+      // Показываем уведомление об успешном изменении
+      toast.success(`Позиция изменена на ${clampedPosition}`);
     },
     [order, project, onUpdate]
   );
 
+  const handleDragStart = useCallback((event) => {
+    setActiveId(event.active.id);
+    // Предотвращаем прокрутку страницы
+    document.body.style.overflow = 'hidden';
+  }, []);
+
   const handleDragEnd = useCallback(
     (event) => {
       const { active, over } = event;
+
+      setActiveId(null);
+      // Восстанавливаем прокрутку страницы
+      document.body.style.overflow = '';
 
       if (active.id !== over.id) {
         const oldIndex = order.findIndex((item) => item.id === active.id);
@@ -262,6 +397,11 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
     },
     [order, project, onUpdate]
   );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+    document.body.style.overflow = '';
+  }, []);
 
   const handleComplete = () => {
     if (!respondentName.trim()) {
@@ -373,6 +513,15 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
   };
 
   const itemIds = useMemo(() => order.map((item) => item.id), [order]);
+
+  // Находим активный элемент для DragOverlay
+  const activeItem = useMemo(() => {
+    if (!activeId) return null;
+    const activeOrderItem = order.find((item) => item.id === activeId);
+    if (!activeOrderItem) return null;
+    const column = columns.find((c) => c.id === activeOrderItem.column_id);
+    return { ...activeOrderItem, column };
+  }, [activeId, order, columns]);
 
   if (!project || !project.columns || project.columns.length === 0) {
     return (
@@ -518,7 +667,10 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+              dropAnimation={dropAnimation}
             >
               <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
                 <div className="priority-order__list">
@@ -541,6 +693,38 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
                   })}
                 </div>
               </SortableContext>
+
+              <DragOverlay
+                dropAnimation={dropAnimation}
+                style={{ cursor: 'grabbing' }}
+              >
+                {activeItem ? (
+                  <div
+                    className="priority-order__item dragging-overlay"
+                    style={{
+                      borderColor: project.text_color + '40',
+                      color: project.text_color,
+                      backgroundColor: project.card_color,
+                      boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+                      cursor: 'grabbing',
+                    }}
+                  >
+                    <div className="item__drag-handle">
+                      <GripVertical size={20} style={{ color: project.text_color }} />
+                    </div>
+                    <div className="item__position">
+                      <span style={{ padding: '6px 8px' }}>{activeItem.position}</span>
+                    </div>
+                    <div className="item__name" style={{ color: project.text_color }}>
+                      {activeItem.column?.name || 'Неизвестно'}
+                    </div>
+                    <div className="item__actions">
+                      <div className="move-button-placeholder" style={{ width: '28px' }} />
+                      <div className="move-button-placeholder" style={{ width: '28px' }} />
+                    </div>
+                  </div>
+                ) : null}
+              </DragOverlay>
             </DndContext>
 
             <Button variant="primary" size="large" onClick={handleComplete} className="submit-button">
