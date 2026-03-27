@@ -247,6 +247,7 @@ const RespondentPage = ({ project, onUpdate, onComplete }) => {
         const orderWithId = sortedOrder.map((item, idx) => ({
           ...item,
           id: `priority-${item.column_id}-${Date.now()}-${idx}`,
+          position: idx + 1,
         }));
         setOrder(orderWithId);
       } else if (sortedColumns.length > 0) {
