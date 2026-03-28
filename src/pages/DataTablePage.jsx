@@ -52,8 +52,6 @@ const DataTablePage = ({ project, onUpdate }) => {
   );
 
   const calculateItemRankings = () => {
-    console.log(sortedDataItems)
-    console.log(sortedColumns)
     const itemScores = sortedColumns.map((item) => {
       let totalScore = 0;
       sortedDataItems.forEach((data) => {
@@ -68,7 +66,6 @@ const DataTablePage = ({ project, onUpdate }) => {
         totalScore,
       };
     });
-    console.log(itemScores)
 
     // Сортируем по общей оценке (меньшая оценка = выше приоритет)
     const sortedByScore = [...itemScores].sort((a, b) => a.totalScore - b.totalScore);
@@ -78,7 +75,6 @@ const DataTablePage = ({ project, onUpdate }) => {
     sortedByScore.forEach((item, index) => {
       rankings.set(item.id, index + 1);
     });
-    console.log(rankings)
 
     return rankings;
   };
